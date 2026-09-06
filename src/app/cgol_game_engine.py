@@ -33,7 +33,6 @@ class GameEngine:
         """GameEngine constructor
         """
         self._game = Game()
-        self._snapshot = Game(self._game)
         self._rows, self._cols = self._game.size()
         self._name = self._game.name
 
@@ -68,16 +67,19 @@ class GameEngine:
         return self._game.live_cells
 
 
-    def save_snapshot(self):
-        """Take a snapshot of the current game
+    def take_snapshot(self) -> str:
+        """Take and store a snapshot of the current game
+
+        Returns:
+            [str] pattern of the current game
         """
-        self._snapshot = Game(self._game)
+        return self._game.get_snapshot()
 
 
-    def restore_snapshot(self):
+    def restore_snapshot(self, snapshot:str) -> bool:
         """Restore a previous game
         """
-        self._game = Game(self._snapshot)
+        return self._game.set_snapshot(snapshot)
 
 
     def grid_data(self) -> npt.NDArray[np.bool_]:
@@ -105,6 +107,26 @@ class GameEngine:
             Size as tuple (rows, cols)
         """
         return (self._rows, self._cols)
+
+
+    @property
+    def is_warp(self) -> bool:
+        """Property: warp state for the game
+
+        Returns:
+            True=warp; False=disintegrate
+        """
+        return self._game.is_warp
+
+
+    @is_warp.setter
+    def is_warp(self, warp:bool):
+        """Setter: warp state for the game
+
+        Args:
+            warp: rue = warp at edges; False = disintegrate at edges
+        """
+        self._game.is_warp = warp
 
 
     def __getitem__(self, key:tuple[int,int]) -> bool:
@@ -157,7 +179,6 @@ class GameEngine:
             if self._game.load_file(filename):
                 self._name = self._game.name
                 self._rows, self._cols = self._game.size()
-                self._snapshot = Game(self._game)
                 return True
 
         return False
@@ -175,7 +196,6 @@ class GameEngine:
         self._game.load_preset(preset)
         self._name = self._game.name
         self._rows, self._cols = self._game.size()
-        self._snapshot = Game(self._game)
         return (self._rows, self._cols, self._name)
 
 
@@ -189,7 +209,6 @@ class GameEngine:
         rows, cols = size
         self._game.resize(rows, cols, anchor="ctr")
         self._rows, self._cols = self._game.size()
-        self._snapshot = Game(self._game)
 
 
     def new_game(self, *, size:tuple[int,int]=(0,0), name:str="") -> tuple[int, int, str]:
@@ -207,7 +226,6 @@ class GameEngine:
         self._game.clear(rows=rows, cols=cols)
         self._name = name
         self._rows, self._cols = self._game.size()
-        self._snapshot = Game(self._game)
         return (self._rows, self._cols, self._name)
 
 

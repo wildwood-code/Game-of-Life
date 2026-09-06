@@ -101,10 +101,21 @@ class CGOL(frmMain):
         self.live_cells = self.pnlGrid.live_cells
         self.rows, self.cols = self.pnlGrid.size()
 
-        # --- Load all images ---
+        # --- Set the application icons ---
+        app_icons = wx.IconBundle()
+        app_icons.AddIcon(wx.Icon(images.imgIcon16x16.GetBitmap()))
+        app_icons.AddIcon(wx.Icon(images.imgIcon24x24.GetBitmap()))
+        app_icons.AddIcon(wx.Icon(images.imgIcon32x32.GetBitmap()))
+        app_icons.AddIcon(wx.Icon(images.imgIcon48x48.GetBitmap()))
+        app_icons.AddIcon(wx.Icon(images.imgIcon128x128.GetBitmap()))
+        app_icons.AddIcon(wx.Icon(images.imgIcon256x256.GetBitmap()))
+        self.SetIcons(app_icons)
+
+        # --- Load all tool images ---
         self.IMAGE_PLAY         = images.imgPlay
         self.IMAGE_PAUSE        = images.imgPause
         self.IMAGE_STEP         = images.imgStep
+        self.IMAGE_WARP         = images.imgWarp
         self.IMAGE_FASTER       = images.imgFaster
         self.IMAGE_SLOWER       = images.imgSlower
         self.IMAGE_TAKE_SNAP    = images.imgTakeSnap
@@ -114,6 +125,7 @@ class CGOL(frmMain):
         # --- Get tool IDs ---
         self.TOOL_ID_PLAY    = self.toolPlay.GetId()
         self.TOOL_ID_STEP    = self.toolStep.GetId()
+        self.TOOL_ID_WARP    = self.toolWarp.GetId()
         self.TOOL_ID_SLOW    = self.toolSlower.GetId()
         self.TOOL_ID_FAST    = self.toolFaster.GetId()
         self.TOOL_ID_TAKE    = self.toolTakeSnap.GetId()
@@ -123,6 +135,7 @@ class CGOL(frmMain):
         # --- Set initial images on all tools ---
         tbar = self.tbarMain
         CGOL.set_tool_image(tbar, self.TOOL_ID_STEP,    self.IMAGE_STEP)
+        CGOL.set_tool_image(tbar, self.TOOL_ID_WARP,    self.IMAGE_WARP)
         CGOL.set_tool_image(tbar, self.TOOL_ID_SLOW,    self.IMAGE_SLOWER)
         CGOL.set_tool_image(tbar, self.TOOL_ID_FAST,    self.IMAGE_FASTER)
         CGOL.set_tool_image(tbar, self.TOOL_ID_TAKE,    self.IMAGE_TAKE_SNAP)
@@ -136,7 +149,7 @@ class CGOL(frmMain):
         self.cmbGame.SetSelection(len(CGOL.COMBO_ACTION_ITEMS) + CGOL.INITIAL_GAME_IDX)
 
         # --- Set warp status ---
-        self.chkWarpEdge.SetValue(self.is_warp)
+        self.tbarMain.ToggleTool(self.TOOL_ID_WARP, self.is_warp)
 
         # --- Setup game speed slider ---
         self.sldSpeed.SetRange(0, CGOL.SLIDER_MAX)
@@ -168,6 +181,7 @@ class CGOL(frmMain):
         accel_entries = [
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_SPACE, self.ID_TOGGLE_PLAY),
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('a'), self.ID_ADVANCE_GEN),
+            wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('s'), self.ID_ADVANCE_GEN),
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('t'), self.ID_TAKE_SNAP),
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('r'), self.ID_RESTORE_SNAP),
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('.'), self.ID_TIMER_FASTER),
@@ -244,6 +258,8 @@ class CGOL(frmMain):
         else:
             CGOL.set_tool_image(self.tbarMain, self.TOOL_ID_PLAY, self.IMAGE_PAUSE)
             self.toolStep.Enable(False)
+
+        self.tbarMain.ToggleTool(self.TOOL_ID_WARP, self.pnlGrid.is_warp)
 
         self.tbarMain.Realize()
 
@@ -498,7 +514,7 @@ class CGOL(frmMain):
                 # Load game
                 self.show_message("Loading game...")
                 self.pnlGrid.load_file()
-            elif sel == 21:
+            elif sel == 2:
                 # Save game
                 self.show_message("Saving game...")
                 self.pnlGrid.save_file()
@@ -510,6 +526,7 @@ class CGOL(frmMain):
                 self.cmbGame.SetSelection(idx)
 
         self.rows, self.cols = self.pnlGrid.size()
+        self.update_toolbar()
         self.update_status_bar()
         self.live_cells = self.pnlGrid.live_cells
         self.show_message(f"Game: {self.pnlGrid.name_of_game}")
@@ -518,14 +535,14 @@ class CGOL(frmMain):
         event.Skip()
 
 
-    def on_warp_check(self, event:wx.CommandEvent):
-        """EVT_CHECKBOX for the "warp" checkbox
+    def on_click_warp(self, event:wx.CommandEvent):
+        """EVT_TOOL for the "warp" check tool
 
         Args:
             event: [wx.CommandEvent]
         """
-        self.is_warp = self.chkWarpEdge.GetValue()
-        # TODO: implement
+        self.is_warp = self.tbarMain.GetToolState(self.TOOL_ID_WARP)
+        self.pnlGrid.is_warp = self.is_warp
         if self.is_warp:
             self.show_message("Let's do the time warp again...")
         else:
@@ -536,23 +553,38 @@ class CGOL(frmMain):
     def on_take_snap(self, event:wx.CommandEvent):
         """EVT_TOOL handler for the take snapshot button
 
+        Copies a game snapshot to the clipboard
+
         Args:
             event: [wx.CommandEvent]
         """
-        # TODO: take snapshot will capture text to clipboard, restore will restore from clipboard
-        self.show_message("Took snapshot of grid...")
-        self.pnlGrid.take_snapshot()
+        if clip := self.pnlGrid.take_snapshot():
+            CGOL.copy_to_clipboard(clip)
+            self.show_message("Took snapshot of grid...")
+        else:
+            self.show_message("Could not take snapshot of grid...")
         event.Skip()
 
 
     def on_restore_snap(self, event:wx.CommandEvent):
         """EVT_TOOL handler for the restore snapshot button
 
+        Restores a game snapshot from the clipboard.
+        The size (rows, cols) must match.
+
         Args:
             event: [wx.CommandEvent]
         """
-        self.show_message("Restored snapshot to grid...")
-        self.pnlGrid.restore_snapshot()
+        snapshot = CGOL.copy_from_clipboard()
+        if snapshot and self.pnlGrid.restore_snapshot(snapshot):
+            self.show_message("Restored snapshot to grid...")
+            self.is_paused = True
+            self.live_cells = self.pnlGrid.live_cells
+            self.update_toolbar()
+            self.update_status_bar()
+        else:
+            self.show_message("Could not restore snapshot to grid...")
+
         event.Skip()
 
 
@@ -589,6 +621,7 @@ class CGOL(frmMain):
             "\nKeyboard Shortcuts:\n"
             "• Spacebar - Play / pause\n"
             "• a - Advance one step\n"
+            "• s - Advance one step\n"
             "• t - Take snapshot\n"
             "• r - Restore snapshot\n"
             "• < - Shorter interval\n"
@@ -598,6 +631,27 @@ class CGOL(frmMain):
 
         # Trigger the native OS dialog
         wx.adv.AboutBox(info)
+
+
+    @staticmethod
+    def copy_to_clipboard(text:str):
+        if wx.TheClipboard.Open():
+            data_object = wx.TextDataObject(text)
+            wx.TheClipboard.SetData(data_object)
+            wx.TheClipboard.Close()
+
+
+    @staticmethod
+    def copy_from_clipboard() -> str:
+        result = ""
+        if wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_UNICODETEXT)):
+            if wx.TheClipboard.Open():
+                data_object = wx.TextDataObject()
+                is_success = wx.TheClipboard.GetData(data_object)
+                wx.TheClipboard.Close()
+                if is_success:
+                    result = data_object.GetText()
+        return result
 
 
 # ------------------------------------------------------------------------------

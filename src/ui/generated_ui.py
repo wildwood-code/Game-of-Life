@@ -38,11 +38,8 @@ class frmMain ( wx.Frame ):
         self.tbarMain.AddControl( self.cmbGame )
         self.tbarMain.AddSeparator()
 
-        self.chkWarpEdge = wx.CheckBox( self.tbarMain, wx.ID_ANY, u"Warp", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.chkWarpEdge.SetValue(True)
-        self.chkWarpEdge.SetToolTip( u"Warp (check) or Vanish (uncheck) at edge" )
+        self.toolWarp = self.tbarMain.AddTool( wx.ID_ANY, u"Warp", wx.ArtProvider.GetBitmap( wx.ART_TIP, wx.ART_TOOLBAR ), wx.NullBitmap, wx.ITEM_CHECK, u"Warp at edge", wx.EmptyString, None )
 
-        self.tbarMain.AddControl( self.chkWarpEdge )
         self.tbarMain.AddSeparator()
 
         self.toolTakeSnap = self.tbarMain.AddTool( wx.ID_ANY, u"Take snapshot", wx.ArtProvider.GetBitmap( wx.ART_TIP, wx.ART_TOOLBAR ), wx.NullBitmap, wx.ITEM_NORMAL, u"Take snapshot", u"Take snapshot", None )
@@ -93,7 +90,7 @@ class frmMain ( wx.Frame ):
         self.Bind( wx.EVT_TOOL, self.on_click_play, id = self.toolPlay.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_click_step, id = self.toolStep.GetId() )
         self.cmbGame.Bind( wx.EVT_COMBOBOX, self.on_game_select )
-        self.chkWarpEdge.Bind( wx.EVT_CHECKBOX, self.on_warp_check )
+        self.Bind( wx.EVT_TOOL, self.on_click_warp, id = self.toolWarp.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_take_snap, id = self.toolTakeSnap.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_restore_snap, id = self.toolRestoreSnap.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_click_slow, id = self.toolSlower.GetId() )
@@ -122,7 +119,7 @@ class frmMain ( wx.Frame ):
     def on_game_select( self, event ):
         event.Skip()
 
-    def on_warp_check( self, event ):
+    def on_click_warp( self, event ):
         event.Skip()
 
     def on_take_snap( self, event ):

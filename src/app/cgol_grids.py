@@ -28,7 +28,7 @@
 # ******************************************************************************
 
 GRID_GLIDER = (
-"Glider", 32, 32,
+"Glider", 32, 32, True,
 """\
 x.x
 .xx
@@ -37,7 +37,7 @@ x.x
 )
 
 GRID_BEACON = (
-"Beacon", 16, 16,
+"Beacon", 16, 16, True,
 """\
 xx..
 xx..
@@ -47,7 +47,7 @@ xx..
 )
 
 GRID_PENTADECATHLON = (
-"Pentadecathlon-15", 48, 48,
+"Pentadecathlon-15", 48, 48, True,
 """\
 xxx
 .x.
@@ -65,7 +65,7 @@ xxx
 )
 
 GRID_PULSAR = (
-"Pulsar-3", 32, 32,
+"Pulsar-3", 32, 32, True,
 """\
 ..xxx...xxx..
 .............
@@ -84,7 +84,7 @@ x....x.x....x
 )
 
 GRID_LWSS = (
-"Spaceship LWSS", 16, 32,
+"Spaceship LWSS", 16, 32, True,
 """\
 .xxxx
 x...x
@@ -94,7 +94,7 @@ x..x.
 )
 
 GRID_MWSS = (
-"Spaceship MWSS", 16, 32,
+"Spaceship MWSS", 16, 32, True,
 """\
 ..x...
 x...x.
@@ -105,7 +105,7 @@ x....x
 )
 
 GRID_HWSS = (
-"Spaceship HWSS", 16, 32,
+"Spaceship HWSS", 16, 32, True,
 """\
 .xxxxxx
 x.....x
@@ -116,7 +116,7 @@ x....x.
 )
 
 GRID_TOAD = (
-"Toad", 16, 16,
+"Toad", 16, 16, True,
 """\
 .xxx
 xxx.
@@ -124,14 +124,14 @@ xxx.
 )
 
 GRID_BLINKER = (
-"Blinker", 16, 16,
+"Blinker", 16, 16, True,
 """\
 xxx
 """
 )
 
 GRID_B_HEPTOMINO = (
-"B-heptomino", 64, 64,
+"B-heptomino", 80, 80, False,
 """\
 x.xx
 xxx.
@@ -140,7 +140,7 @@ xxx.
 )
 
 GRID_I_HEPTOMINO = (
-"I-heptomino", 64, 64,
+"I-heptomino", 80, 80, False,
 """\
 ..xx
 .xx.
@@ -150,7 +150,7 @@ xx..
 )
 
 GRID_GOSPER = (
-"Gosper's glider gun", 64, 64,
+"Gosper's glider gun", 64, 64, False,
 """\
 ........................x...........
 ......................x.x...........
@@ -165,17 +165,17 @@ xx........x...x.xx....x.x...........
 )
 
 GRID_BLANK_SMALL = (
-"Blank grid, small", 16, 16,
+"Blank grid, small", 16, 16, True,
 " "
 )
 
 GRID_BLANK_MID = (
-"Blank grid, mid", 32, 32,
+"Blank grid, mid", 32, 32, True,
 " "
 )
 
 GRID_BLANK_LARGE = (
-"Blank grid, large", 64, 64,
+"Blank grid, large", 64, 64, True,
 " "
 )
 

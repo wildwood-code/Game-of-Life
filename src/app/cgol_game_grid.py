@@ -192,6 +192,26 @@ class pnlGameGrid(wx.Panel):
         return (self.rows, self.cols)
 
 
+    @property
+    def is_warp(self) -> bool:
+        """Property: warp state for the engine
+
+        Returns:
+            True=warp; False=disintegrate
+        """
+        return self._engine.is_warp
+
+
+    @is_warp.setter
+    def is_warp(self, warp:bool):
+        """Setter: warp state for the engine
+
+        Args:
+            warp: True=warp; False=disintegrate
+        """
+        self._engine.is_warp = warp
+
+
     def _sync_from_engine(self):
         """Synchronize the display buffer from the game engine
         """
@@ -222,21 +242,23 @@ class pnlGameGrid(wx.Panel):
         return self._engine.save_file(self)
 
 
-    def take_snapshot(self):
+    def take_snapshot(self) -> str:
         """Take and store a snapshot of the current game grid
+
+        Returns:
+            [str] pattern of the current grid
         """
-        # --- Store the current game snapshot ---
-        self._engine.save_snapshot()
-        self.Refresh()
+        return self._engine.take_snapshot()
 
 
-    def restore_snapshot(self):
+    def restore_snapshot(self, snapshot:str) -> bool:
         """Restore the last saved snapshot to the current game grid
         """
-        # --- Restore a taken snapshot or the original game ---
-        self._engine.restore_snapshot()
-        self._sync_from_engine()
-        self.Refresh()
+        if self._engine.restore_snapshot(snapshot):
+            self._sync_from_engine()
+            self.Refresh()
+            return True
+        return False
 
 
     def on_paint(self, event:wx.PaintEvent):

@@ -29,6 +29,7 @@ import re
 from typing import Literal
 import cgol_grids as grids
 from pathlib import Path
+import io
 
 
 @static_init
@@ -354,7 +355,7 @@ class Game:
 
     @classmethod
     def static_init(cls):
-        cls.GAMES : list[tuple[str, int, int, str]] = \
+        cls.GAMES : list[tuple[str, int, int, bool, str]] = \
         [   # format: ("name", rows, cols, "init-string")
             grids.GRID_GLIDER,
             grids.GRID_BEACON,
@@ -387,30 +388,33 @@ class Game:
         if isinstance(obj, Game):
             # make a copy of the Game object that was supplied
             self._name = obj._name
+            self._is_warp = obj._is_warp
             self._grid = [Grid(obj._grid[0]), Grid(obj._grid[1])]
             self._rows, self._cols = obj._rows, obj._cols
             self._idx = obj._idx
-            self._games_list : list[tuple[str, int, int, str]] = obj._games_list.copy()
+            self._games_list : list[tuple[str, int, int, bool, str]] = obj._games_list.copy()
             self._live_cells = obj._live_cells
 
         else:
             # initialize to empty Game
             self._name = ""
+            self._is_warp = True
             self._grid = [Grid(), Grid()]
             self._rows, self._cols = 0, 0
             self._idx = 0
-            self._games_list : list[tuple[str, int, int, str]] = Game.GAMES.copy()
+            self._games_list : list[tuple[str, int, int, bool, str]] = Game.GAMES.copy()
             self._live_cells = 0
 
 
-    def load_pattern(self, pattern:str, *, name:str, rows:int=0, cols:int=0):
+    def load_pattern(self, pattern:str, *, name:str, rows:int=0, cols:int=0, is_warp:bool=True):
         """Load a game from a pattern
 
         Args:
-            pattern: [str] pattern descriptor for game grid
+            pattern: [str] pattern for game grid
             name:    [str] name to give game
             rows:    [int] number of rows; defaults to 0 -> auto
             cols:    [int] number of columns; defaults to 0 -> auto
+            is_warp: [bool] True = warp at edge; False = disintegrate at edge
         """
         if pattern:
             # game grid from pattern
@@ -425,98 +429,8 @@ class Game:
         self._rows, self._cols = self._grid[0].size()
         self._idx = 0  # points at the active grid
         self._live_cells = self._grid[0].live_count
+        self._is_warp = is_warp
         self._register_game()
-
-
-    def load_file(self, filename:str, *, name:str="", rows:int=0, cols:int=0) -> bool:
-        """Load a game from a file
-
-        Args:
-            filename: [str] filename of the file to be loaded
-            name:     [str] optional name to assign to game {default "" => use filename stem}
-            rows:     [int] optional number of rows {default 0 => rows from file}
-            cols:     [int] optional number of cols {default 0 => cols from file}
-
-        Returns:
-            True if file was successfully loaded; False otherwise
-        """
-        try:
-            with open(filename, 'r') as file:
-                name = file.readline()
-                rows_cols = file.readline()
-                if m := re.match(r"\s*([0-9]+)\s*,\s*([0-9]+)\s*$", rows_cols):
-                    rows = int(m.group(1))
-                    cols = int(m.group(2))
-                else:
-                    raise ValueError()
-                my_pattern = ""
-                try:
-                    for r in range(rows):
-                        my_row = file.readline()
-                        my_pattern += my_row + "\n"
-                    self.load_pattern(pattern=my_pattern, name=name, rows=rows, cols=cols)
-                except:
-                    raise ValueError()
-        except IOError:
-            return False
-        except ValueError:
-            return False
-        return True
-
-
-    def save_file(self, filename:str, *, name:str="") -> bool:
-        """_summary_
-
-        Args:
-            filename: [str] filename of the file to be saved
-            name:     [str] optional name to assign to game {default "" => use filename stem}
-
-        Returns:
-            True if file was successfully saved; False otherwise
-        """
-        file_path = Path(filename)
-        try:
-            with open(filename, 'w') as file:
-                if name:
-                    self._name = name.strip()
-                else:
-                    self._name = file_path.stem.strip()
-                file.write(f"{self._name}\n")
-                file.write(f"{self._rows}, {self._cols}\n")
-                game_str = str(self)
-                file.write(game_str)
-                self._register_game()
-        except IOError:
-            return False
-        return True
-
-
-    def _register_game(self):
-        """Register the current game as a game in the games list (overwrite
-        if a game with the same name exists)
-        """
-        name = self._name
-        if any(t[0]==name for t in self._games_list):
-            # overwrite the matching games_list entry
-            for idx in range(len(self._games_list)):
-                if self._games_list[idx][0] == name:
-                    entry = (name, self._rows, self._cols, str(self))
-                    self._games_list[idx] = entry
-                    break
-        else:
-            # add a new games_list entry at the end
-            my_pattern = str(self)
-            self._games_list.append((name, self._rows, self._cols, my_pattern))
-
-
-    @property
-    def games_list(self) -> list[str]:
-        """Property: get a list of game names
-
-        Returns:
-            A list of the names of all of the preset and loaded games
-        """
-        return [ t[0] for t in self._games_list]
 
 
     def load_preset(self, preset:int) -> tuple[int, int, str]:
@@ -536,13 +450,196 @@ class Game:
         n_rows = my_game_spec[1]
         n_cols = my_game_spec[2]
         self._name = my_game_spec[0].strip()
-        self._grid = [Grid(my_game_spec[3], rows=n_rows, cols=n_cols),
+        self._is_warp = my_game_spec[3]
+        self._grid = [Grid(my_game_spec[4], rows=n_rows, cols=n_cols),
                     Grid(rows=n_rows, cols=n_cols)]
         self._live_cells = self._grid[0].live_count
         self._rows, self._cols = self._grid[0].size()
         self._idx = 0  # points at the active grid
 
         return (self._rows, self._cols, self._name)
+
+
+    @staticmethod
+    def __read_from_open_file(file: io.TextIOWrapper|io.StringIO) -> tuple[str, int, int, bool, str]|None:
+        """Read a game descriptor from an open file
+
+        Args:
+            file: open file or StringIO object
+
+        Returns:
+            game descriptor (name, rows, cols, is_warp, pattern)
+        """
+        result = None
+        is_success = True
+        try:
+            name = file.readline()
+            rows_cols = file.readline()
+            if m := re.match(r"\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*(True|False)\s*$", rows_cols):
+                # new format: rows, cols, True/False
+                rows = int(m.group(1))
+                cols = int(m.group(2))
+                is_warp = not (m.group(3)=="False")
+            elif m := re.match(r"\s*([0-9]+)\s*,\s*([0-9]+)\s*$", rows_cols):
+                # old format: rows, cols
+                rows = int(m.group(1))
+                cols = int(m.group(2))
+                is_warp = True
+            else:
+                is_success = False
+        except:
+            is_success = False
+        if is_success:
+            my_pattern = ""
+            try:
+                for r in range(rows):
+                    my_row = file.readline()
+                    my_pattern += my_row + "\n"
+            except:
+                is_success = False
+        if is_success:
+            result = (name, rows, cols, is_warp, my_pattern)
+        return result
+
+
+    def load_file(self, filename:str) -> bool:
+        """Load a game from a file
+
+        Args:
+            filename: [str] filename of the file to be loaded
+
+        Returns:
+            True if file was successfully loaded; False otherwise
+        """
+        try:
+            with open(filename, 'r') as file:
+                load_result = Game.__read_from_open_file(file)
+                if load_result:
+                    name, rows, cols, is_warp, my_pattern = load_result
+                try:
+                    self.load_pattern(pattern=my_pattern, name=name, rows=rows, cols=cols, is_warp=is_warp)
+                except:
+                    raise ValueError()
+        except IOError:
+            return False
+        except ValueError:
+            return False
+        return True
+
+
+    def set_snapshot(self, snapshot:str) -> bool:
+        """Sets the game grid from the given snapshot
+
+        Args:
+            snapshot: [str] essentially the text format in a .cgol file
+
+        Returns:
+            True if successful; False otherwise
+
+        Notes:
+            The snapshot rows and cols must match exactly. The purpose of this
+            function is to support taking/restoring snapshots of the grid.
+        """
+        result = False
+        with io.StringIO(snapshot) as file_like:
+            if load_result := Game.__read_from_open_file(file_like):
+                _, rows, cols, _, pattern = load_result
+                if rows==self._rows and cols==self._cols and pattern:
+                    # if we made it this far, pattern should be valid
+                    self._grid[self._idx] = Grid(pattern, rows=rows, cols=cols)
+                    result = True
+        return result
+
+
+    @staticmethod
+    def __write_to_open_file(file: io.TextIOWrapper|io.StringIO,
+                             desc:tuple[str,int,int,bool,str]) -> bool:
+        """Write a game descriptor to an open file
+
+        Args:
+            file: open file or StringIO object
+            desc: game descriptor (name, rows, cols, is_warp, pattern)
+
+        Returns:
+            True if successful; False otherwise
+        """
+        result = True
+        name, rows, cols, is_warp, pattern = desc
+        try:
+            file.write(f"{name}\n")
+            str_warp = "True" if is_warp else "False"
+            file.write(f"{rows}, {cols}, {str_warp}\n")
+            file.write(pattern)
+        except:
+            result = False
+
+        return result
+
+
+    def get_snapshot(self) -> str:
+        result = ""
+        with io.StringIO() as file_like:
+            pattern = str(self)
+            game_set = (self._name, self._rows, self._cols, self._is_warp, pattern)
+            if Game.__write_to_open_file(file_like, game_set):
+                result = file_like.getvalue()
+        return result
+
+
+    def save_file(self, filename:str, *, name:str="") -> bool:
+        """_summary_
+
+        Args:
+            filename: [str] filename of the file to be saved
+            name:     [str] optional name to assign to game {default "" => use filename stem}
+
+        Returns:
+            True if file was successfully saved; False otherwise
+        """
+        file_path = Path(filename)
+        try:
+            with open(filename, 'w') as file:
+                if name:
+                    self._name = name.strip()
+                else:
+                    self._name = file_path.stem.strip()
+                pattern = str(self)
+                game_set = (self._name, self._rows, self._cols, self._is_warp, pattern)
+                if Game.__write_to_open_file(file, game_set):
+                    self._register_game()
+                else:
+                    return False
+        except IOError:
+            return False
+        return True
+
+
+    def _register_game(self):
+        """Register the current game as a game in the games list (overwrite
+        if a game with the same name exists)
+        """
+        name = self._name
+        if any(t[0]==name for t in self._games_list):
+            # overwrite the matching games_list entry
+            for idx in range(len(self._games_list)):
+                if self._games_list[idx][0] == name:
+                    entry = (name, self._rows, self._cols, self._is_warp, str(self))
+                    self._games_list[idx] = entry
+                    break
+        else:
+            # add a new games_list entry at the end
+            my_pattern = str(self)
+            self._games_list.append((name, self._rows, self._cols, self._is_warp, my_pattern))
+
+
+    @property
+    def games_list(self) -> list[str]:
+        """Property: get a list of game names
+
+        Returns:
+            A list of the names of all of the preset and loaded games
+        """
+        return [ t[0] for t in self._games_list]
 
 
     def grid_copy(self) -> npt.NDArray[np.bool_]:
@@ -593,7 +690,33 @@ class Game:
         return self._name
 
 
+    @property
+    def is_warp(self) -> bool:
+        """Property: is_warp
+
+        Returns:
+            True = warp at edges; False = disintegrate at edges
+        """
+        return self._is_warp
+
+
+    @is_warp.setter
+    def is_warp(self, warp):
+        """Setter: is_warp
+
+        Args:
+            warp: rue = warp at edges; False = disintegrate at edges
+        """
+        self._is_warp = warp
+
+
     def clear(self, rows:int=0, cols:int=0):
+        """Clear the grid and optionally resize
+
+        Args:
+            rows: rows dimension. Default=0 -> do not resize rows
+            cols: columns dimension. Default=0 -> do not resize cols
+        """
         self._grid[0].clear()
         self._grid[1].clear()
         if rows>0 and cols>0:
@@ -618,20 +741,19 @@ class Game:
         self._live_cells = self._grid[self._idx].live_count
 
 
-    def step(self) -> int:
-        """Generate the next evolution step in the Game of Life
+    @staticmethod
+    def __rules_warp(grid_now:Grid, grid_next:Grid) -> int:
+        """Execute rules for grid with warp at edges
+
+        Args:
+            grid_now: grid in the current generation
+            grid_next: grid calculated for the new generation
 
         Returns:
-            Number of live cells
+            live cell count for the new generation
         """
         live_cells : int = 0
-        idx_now = self._idx
-        idx_next = 0 if idx_now else 1
-        grid_now = self._grid[idx_now]
-        grid_next = self._grid[idx_next]
-        grid_next.clear()
         nr, nc = grid_next.size()
-
         for i in range(nr):
             for j in range(nc):
                 # get our current state of life
@@ -662,16 +784,91 @@ class Game:
                 if life: live_cells += 1
                 grid_next[i, j] = life
 
-        # toggle the active grid
+        return live_cells
+
+
+    @staticmethod
+    def __disintegrate_at_edges(grid:Grid, live_cells:int) -> int:
+        """Disintegrate structures at edges: Breadth-First Search (BFS) algorithm
+
+        Args:
+            grid_now: grid in the current generation
+            live_cells: current live cell count
+
+        Returns:
+            live cell count after disintegration
+        """
+        n_rows, n_cols = grid.size()
+        visited = set()
+        to_kill = set()
+
+        # identify all live cells sitting at the borders
+        border_cells = []
+        for r in range(n_rows):
+            if grid[r,0]: border_cells.append((r,0))
+            if grid[r,n_cols-1]: border_cells.append((r,n_cols-1))
+        for c in range(n_cols):
+            if grid[0,c]: border_cells.append((0,c))
+            if grid[n_rows-1,c]: border_cells.append((n_rows-1,c))
+
+        # flood fill to find the entire structure
+        for start_r, start_c in border_cells:
+            start_coord = (start_r, start_c)
+            if start_coord in visited:
+                continue
+
+            # standard BFS queue
+            queue = [start_coord]
+            visited.add(start_coord)
+
+            while queue:
+                r, c = queue.pop(0)
+                to_kill.add((r, c))
+                # check all 8 neighbors
+                for dr in [-1, 0, 1]:
+                    for dc in [-1, 0, 1]:
+                        nr, nc = r + dr, c + dc
+                        key = (nr,nc)
+                        # if neighbor is in bounds, alive, and not yet visited
+                        if 0 <= nr < n_rows and 0 <= nc < n_cols:
+                            if grid[key] and key not in visited:
+                                visited.add(key)
+                                queue.append(key)
+
+            # disintegrate the entire structure
+            for key in to_kill:
+                grid[key] = False
+                live_cells -= 1
+
+        return live_cells
+
+
+    def step(self) -> int:
+        """Generate the next evolution step in the Game of Life
+
+        Returns:
+            Number of live cells
+        """
+        idx_now = self._idx
+        idx_next = 0 if idx_now else 1
+        grid_now = self._grid[idx_now]
+        grid_next = self._grid[idx_next]
+        grid_next.clear()
+        live_cells = self.__rules_warp(grid_now, grid_next)
+        if not self._is_warp:
+            live_cells = self.__disintegrate_at_edges(grid_next, live_cells)
         self._idx = idx_next
-
         self._live_cells = live_cells
-
         return live_cells
 
 
     @property
     def live_cells(self) -> int:
+        """Property: live cell count
+
+        Returns:
+            Returns the number of live cells
+        """
         return self._live_cells
 
 
