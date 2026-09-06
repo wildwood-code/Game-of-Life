@@ -2,4 +2,4 @@
 *.ico binary
 *.png binary
 
-dist/ binary
+dist/** binary
