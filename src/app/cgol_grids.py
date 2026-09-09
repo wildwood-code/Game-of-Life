@@ -21,8 +21,9 @@
 #  Note:
 #    retain the given spacing with the """ text field justified to the left margin
 #
-#  Created    : 2026-09-05
-#  Modified   : 2026-09-05
+#  Change log:
+#    2026-09-05  KSM  Created
+#    2026-09-09  KSM  Updated the comment to include this change log
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************

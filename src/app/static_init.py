@@ -21,8 +21,10 @@
 #            cls.__DEEP_THOUGHT = 42
 #            cls.__connected_devices = 0
 #
-#  Created    : 09/29/2025
-#  Modified   : 09/29/2025
+#  Change log:
+#    2025-09-20  KSM  Created
+#    2026-09-09  KSM  Updated the comment to include this change log
+#
 #  Author     : Kerry S. Martin, wssm243@gmail.com
 # ******************************************************************************
 

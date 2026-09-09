@@ -12,13 +12,14 @@
 #    This file implements the GameEngine object. The game engine interfaces
 #    between the GUI and the core Game object.
 #
-#  Created    : 2026-09-05
-#  Modified   : 2026-09-05
+#  Change log:
+#    2026-09-05  KSM  Created
+#    2026-09-09  KSM  Changed class Game to newer CGOL_Game
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
 
-from cgol_class import Game
+from cgol_class import CGOL_Game
 import wx
 import os
 import numpy as np
@@ -32,7 +33,7 @@ class GameEngine:
     def __init__(self):
         """GameEngine constructor
         """
-        self._game = Game()
+        self._game = CGOL_Game()
         self._rows, self._cols = self._game.size()
         self._name = self._game.name
 
@@ -54,7 +55,7 @@ class GameEngine:
         Returns:
             List of the names of all preset and loaded games
         """
-        return self._game.games_list
+        return self._game.games_names_list
 
 
     @property
@@ -88,7 +89,7 @@ class GameEngine:
         Returns:
             Numpy NPArray of bool grid cells
         """
-        return self._game.grid_copy()
+        return self._game.grid_data()
 
 
     def advance_generation(self) -> int:
@@ -97,7 +98,7 @@ class GameEngine:
         Returns:
             Number of live cells
         """
-        return self._game.step()
+        return self._game.advance_generation()
 
 
     def size(self) -> tuple[int, int]:
@@ -207,7 +208,7 @@ class GameEngine:
             cols: Target number of columns
         """
         rows, cols = size
-        self._game.resize(rows, cols, anchor="ctr")
+        self._game.resize(rows, cols, anchor="x")
         self._rows, self._cols = self._game.size()
 
 

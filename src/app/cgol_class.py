@@ -19,6 +19,9 @@
 #  Change log:
 #    2026-09-05  KSM  Created
 #    2026-09-09  KSM  Replaced "indexed grid" with single-grid
+#                     Replaced Grid with CellArray
+#                     Derive CGOL_Game from protocol class Game
+#                     Added use of "B/S" rules specifier (defaults to B3/S23)
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -31,328 +34,11 @@ from typing import Literal
 import cgol_grids as grids
 from pathlib import Path
 import io
-
+from CellArray import CellArray, ResizeAnchor
+from Game_protocol import Game, Rules, RuleSpec, CellArraySize, Designator, GamesList
 
 @static_init
-class Grid:
-
-    @classmethod
-    def static_init(cls):
-        # characters for displaying grid
-        # use ASCII characters as these will be used for file I/O
-        cls.LIVE_CELL = "#"  # filled cell: used when cell state is True
-        cls.DEAD_CELL = "."  # center dot: used when cell state is False
-        cls.DEAD_SET  = [" ", "."]  # chars recognized as "dead"
-
-        # regular expressions
-        cls.RE_PARSE_GRID = re.compile(r"^(.+)$", re.MULTILINE)
-
-
-    def __init__(self, obj:"Grid|str|None"=None, *, rows:int=0, cols:int=0):
-        """Grid constructor
-
-        Args:
-            obj:  [Grid] Initialization object. See Notes.
-            obj:  [str]  String used to initialize grid. See Notes
-            obj:  [None] Create an empty grid {default}
-            rows: [int]  Number of grid rows {default 0 => auto}
-            cols: [int]  Number of grid columns {default 0 => auto}
-
-        Raises:
-            Exception: raised if the initialization string is invalid
-
-        Notes:
-            The initialization object is used to initialize the grid upon
-            construction. It may be another Grid object, in which case the
-            grid is copied. It may be a string, with one row per line. Use "."
-            to denote a False/dead grid cell and "x" to denote a True/live grid
-            cell. The default is an empty grid.
-
-            If a size is not given, the size is determined by the number of rows
-            and cols in the initialization object.
-
-            If a size is given, rows and cols, then the constructed grid is
-            resized to that given size, with any initialized grid centered.
-        """
-        # first, create an empty grid
-        self._nr = 0
-        self._nc = 0
-        self._data = np.zeros((0,0), dtype=bool)
-
-        # next, precreate an initialized grid from a Grid or string
-        if isinstance(obj, Grid):
-            self._nr = obj._nr
-            self._nc = obj._nc
-            self._data = obj._data.copy()
-
-        elif isinstance(obj, str):
-            # lines are separated by newlines
-            # space, period, or cdot are "dead"
-            # everything else is "live"
-            success = False
-            m = Grid.RE_PARSE_GRID.findall(obj)
-            while m is not None: # if-loop with break out
-                nr = len(m)
-                if not nr > 0: break
-                nc = len(m[0])
-                if not nc > 0: break
-                self._nr = nr
-                self._nc = nc
-                self._data = np.zeros((nr, nc), dtype=bool)
-                dead_set = Grid.DEAD_SET
-                for i in range(nr):
-                    row = m[i]
-                    if not len(row) == nc: break
-                    for j in range(nc):
-                        if not row[j] in dead_set:
-                            self._data[i,j] = True
-                success = True
-                break
-
-            if not success:
-                raise Exception("Invalid init string")
-
-        # finally, adjust the size
-        if rows != self._nr or cols != self._nr:
-            self.resize(rows=rows, cols=cols, anchor="ctr")
-
-
-    def __bool__(self) -> bool:
-        """Grid test: is it non-zero-dimension?
-
-        Returns:
-            False if the grid is 0x0 dimension; True otherwise
-        """
-        return self._nr > 0 and self._nc > 0
-
-
-    def data_copy(self) -> npt.NDArray[np.bool_]:
-        """Get a copy of the raw Numpy bool array
-
-        Returns:
-            Copy of raw Numpy bool array
-        """
-        return self._data.copy()
-
-
-    def clear(self):
-        """Clear the grid: make all cells False/dead
-        """
-        self._data.fill(False)
-
-
-    def clone(self) -> "Grid":
-        """Clone the grid: make a copy of itself
-
-        Returns:
-            Returns a new Grid object that is a copy of this one.
-        """
-        my_clone = Grid(self)
-        return my_clone
-
-
-    def size(self) -> tuple[int,int]:
-        """Grid dimensions: recalls the size (rows, cols) of the grid as a tuple
-
-        Returns:
-            Tuple (rows, cols)
-        """
-        return (self._nr, self._nc)
-
-
-    @property
-    def live_count(self) -> int:
-        """Grid property: number of True/live grid cells
-
-        Returns:
-            Number of True/live grid cells
-        """
-        live = 0
-        for i in range(self._nr):
-            for j in range(self._nc):
-                if self._data[i, j]: live += 1
-        return live
-
-
-    @property
-    def cell_count(self) -> int:
-        """Grid property: number of cells in the grid
-
-        Returns:
-            Number of cells in the grid, including True/live and False/dead
-        """
-        return self._nr * self._nc
-
-
-    @property
-    def rows(self) -> int:
-        """Grid property: number of rows in the grid
-
-        Returns:
-            Number of rows in the grid
-        """
-        return self._nr
-
-
-    @property
-    def cols(self) -> int:
-        """Grid property: number of columns in the grid
-
-        Returns:
-            Number of columns in the grid
-        """
-        return self._nc
-
-
-    def resize(self, rows:int, cols:int, *, anchor:Literal["ctr", "nw", "n", "ne", "w", "e", "sw", "s", "se"]="nw"):
-        """Resize the Grid object
-
-        Args:
-            rows:   [int] Target number of rows {default 0}
-            cols:   [int] Target number of cols {default 0}
-                          0 => don't change rows/cols; + => target rows/cols
-            anchor: Anchor position {default "nw"}
-                    ["nw", "n", "ne", "w", "ctr", "e", "sw", "s", "se"]
-        """
-
-        if rows > 0:
-            my_rows, my_cols = self.size()
-            rows_t = 0  # number of top rows to add or subtract
-            rows_b = 0  # number of bottom rows to add or subtract
-            add_rows = rows - my_rows
-
-            match anchor:
-                case "ctr" | "w" | "e":
-                    # divide equally (favor bottom if odd)
-                    rows_t = int(add_rows/2)
-                    rows_b = add_rows - rows_t
-
-                case "nw" | "n" | "ne":
-                    # add/subtract at bottom
-                    rows_b = add_rows
-
-                case "sw" | "s" | "se":
-                    # add/subtract at top
-                    rows_t = add_rows
-
-            if add_rows > 0:
-                data = np.vstack((np.zeros((rows_t, my_cols), dtype=bool), self._data, np.zeros((rows_b, my_cols), dtype=bool)))
-                self._data = data
-                self._nr = rows
-
-            elif add_rows < 0:
-                rows_delete = np.r_[0:-rows_t, my_rows+rows_b:my_rows]
-                data = np.delete(self._data, rows_delete, axis=0)
-                self._data = data
-                self._nr = rows
-
-        if cols > 0:
-            my_rows, my_cols = self.size()
-            cols_l = 0  # number of left cols to add or subtract
-            cols_r = 0  # number of right cols to add or subtract
-            add_cols = cols - my_cols
-
-            match anchor:
-                case "ctr" | "n" | "s":
-                    # divide equally (favor right)
-                    cols_l = int(add_cols/2)
-                    cols_r = add_cols - cols_l
-
-                case "nw" | "w" | "sw":
-                    # add/subtract at right
-                    cols_r = add_cols
-
-                case "ne" | "e" | "se":
-                    # add/subtract at left
-                    cols_l = add_cols
-
-            if add_cols > 0:
-                data = np.hstack((np.zeros((my_rows, cols_l), dtype=bool), self._data, np.zeros((my_rows, cols_r), dtype=bool)))
-                self._data = data
-                self._nc = cols
-
-            elif add_cols < 0:
-                cols_delete = np.r_[0:-cols_l, my_cols+cols_r:my_cols]
-                data = np.delete(self._data, cols_delete, axis=1)
-                self._data = data
-                self._nc = cols
-
-
-    def _coerce(self, pos:tuple[int,int]) -> tuple[int,int]:
-        """Coerce the given grid position (r,c) into one within the warped grid
-
-        Args:
-            pos: [tuple] Grid position: (r, c)
-
-        Returns:
-            [tuple] Coerced grid position: (r, c)
-                    (-1, -1) for a 0x0 grid
-        """
-        r, c = pos
-        r = r % self._nr if self._nr != 0 else -1
-        c = c % self._nc if self._nc != 0 else -1
-        return (r, c)
-
-
-    def __getitem__(self, pos:tuple[int,int]) -> bool:
-        """Grid indexing: obj[r, c]
-
-        Args:
-            pos: [tuple] Position in the grid as a tuple (r, c)
-
-        Returns:
-            Grid state True/False at the given position
-        """
-        r, c = self._coerce(pos)
-        return self._data[r, c]
-
-
-    def __setitem__(self, pos:tuple[int,int], value:bool):
-        """Grid indexing: obj[r, c] = value
-
-        Args:
-            pos:   [tuple] Position in the grid: (r, c)
-            value: [bool] Grid state to set the given position
-        """
-        r, c = self._coerce(pos)
-        self._data[r, c] = value
-
-
-    def __repr__(self) -> str:
-        """Grid representation (partial)
-
-        Returns:
-            Displays the grid representation partially. By partially, the size
-            is shown and the number of live cells, but not the grid data.
-        """
-        n_live = self.live_count
-        return f"Grid(rows={self._nr}, cols={self._nc}, live_cells={n_live})"
-
-
-    def __str__(self) -> str:
-        """Grid data as a string
-
-        Returns:
-            Returns a string with newlines splitting rows. The number of chars
-            on each row is the number of columns. The chars used to represent
-            live and dead cells is specified in the Grid static variables.
-        """
-        c_live = Grid.LIVE_CELL
-        c_dead = Grid.DEAD_CELL
-        grid = ""
-        for i in range(self._nr):
-            row = ""
-            for j in range(self._nc):
-                e = c_live if self[i,j] else c_dead
-                row = row + e
-            grid = grid + row
-            if i < self._nr-1:
-                grid = grid + "\n"
-        return grid
-
-
-@static_init
-class Game:
+class CGOL_Game(Game):
 
     @classmethod
     def static_init(cls):
@@ -376,30 +62,60 @@ class Game:
         ]
 
 
-    def __init__(self, obj:"Game|None"=None):
+    def __init__(self, obj:"CGOL_Game|None"=None, rules:Rules="B3/S23"):
         """Game constructor
 
         Args:
             obj:  {optional} Game object. Make self a copy if obj is passed.
         """
 
-        if isinstance(obj, Game):
+        if isinstance(obj, CGOL_Game):
             # make a copy of the Game object that was supplied
             self._name = obj._name
             self._is_warp = obj._is_warp
-            self._grid = Grid(obj._grid)
+            self._grid = CellArray(obj._grid, dtype=bool)
             self._rows, self._cols = obj._rows, obj._cols
             self._games_list : list[tuple[str, int, int, bool, str]] = obj._games_list.copy()
             self._live_cells = obj._live_cells
+            self._rule_spec : RuleSpec = Game._decode_rules(rules)
 
         else:
             # initialize to empty Game
             self._name = ""
             self._is_warp = True
-            self._grid = Grid()
+            self._grid = CellArray(dtype=bool)
             self._rows, self._cols = 0, 0
-            self._games_list : list[tuple[str, int, int, bool, str]] = Game.GAMES.copy()
+            self._games_list : list[tuple[str, int, int, bool, str]] = CGOL_Game.GAMES.copy()
             self._live_cells = 0
+            self._rule_spec : RuleSpec = Game._decode_rules(rules)
+
+
+    @property
+    def rules(self) -> Rules:
+        return Game._encode_rules(self._rule_spec)
+
+
+    @rules.setter
+    def rules(self, rules:Rules):
+        self._rule_spec : RuleSpec = Game._decode_rules(rules)
+
+
+    def new_game(self, *, size:CellArraySize, name:str="", is_warp:bool=True) -> Designator:
+        """Create a new, blank game grid
+
+        Args:
+            size:    [tuple] (rows, cols)
+            name:    [str]   Name of the game. Defaults to "".
+            is_warp: [bool]  True=warp edge; False=non-warp edge
+
+        Returns:
+            [tuple] (rows, cols, name)
+        """
+        self._name = name
+        self._is_warp = is_warp
+        self._size = size
+        self._live_cells = 0
+        self._array : CellArray[bool] = CellArray[bool](size=self._size, dtype=bool)
 
 
     def load_pattern(self, pattern:str, *, name:str, rows:int=0, cols:int=0, is_warp:bool=True):
@@ -414,13 +130,13 @@ class Game:
         """
         if pattern:
             # game grid from pattern
-            self._grid = Grid(pattern, rows=rows, cols=cols)
+            self._grid = CellArray(pattern, size=(rows, cols))
         else:
             # empty game grid
-            self._grid = Grid(rows=rows, cols=cols)
+            self._grid = CellArray(size=(rows, cols))
 
         self._name = name.strip()
-        self._rows, self._cols = self._grid.size()
+        self._rows, self._cols = self._grid.size
         self._live_cells = self._grid.live_count
         self._is_warp = is_warp
         self._register_game()
@@ -442,9 +158,9 @@ class Game:
         n_cols = my_game_spec[2]
         self._name = my_game_spec[0].strip()
         self._is_warp = my_game_spec[3]
-        self._grid = Grid(my_game_spec[4], rows=n_rows, cols=n_cols)
+        self._grid = CellArray(my_game_spec[4], size=(n_rows, n_cols))
         self._live_cells = self._grid.live_count
-        self._rows, self._cols = self._grid.size()
+        self._rows, self._cols = self._grid.size
 
         return (self._rows, self._cols, self._name)
 
@@ -502,7 +218,7 @@ class Game:
         """
         try:
             with open(filename, 'r') as file:
-                if load_result := Game.__read_from_open_file(file):
+                if load_result := CGOL_Game.__read_from_open_file(file):
                     name, rows, cols, is_warp, my_pattern = load_result
                 try:
                     self.load_pattern(pattern=my_pattern, name=name, rows=rows, cols=cols, is_warp=is_warp)
@@ -530,11 +246,11 @@ class Game:
         """
         result = False
         with io.StringIO(snapshot) as file_like:
-            if load_result := Game.__read_from_open_file(file_like):
+            if load_result := CGOL_Game.__read_from_open_file(file_like):
                 _, rows, cols, _, pattern = load_result
                 if rows==self._rows and cols==self._cols and pattern:
                     # if we made it this far, pattern should be valid
-                    self._grid = Grid(pattern, rows=rows, cols=cols)
+                    self._grid = CellArray(pattern, size=(rows, cols))
                     result = True
         return result
 
@@ -569,7 +285,7 @@ class Game:
         with io.StringIO() as file_like:
             pattern = str(self)
             game_set = (self._name, self._rows, self._cols, self._is_warp, pattern)
-            if Game.__write_to_open_file(file_like, game_set):
+            if CGOL_Game.__write_to_open_file(file_like, game_set):
                 result = file_like.getvalue()
         return result
 
@@ -593,7 +309,7 @@ class Game:
                     self._name = file_path.stem.strip()
                 pattern = str(self)
                 game_set = (self._name, self._rows, self._cols, self._is_warp, pattern)
-                if Game.__write_to_open_file(file, game_set):
+                if CGOL_Game.__write_to_open_file(file, game_set):
                     self._register_game()
                 else:
                     return False
@@ -621,7 +337,29 @@ class Game:
 
 
     @property
-    def games_list(self) -> list[str]:
+    def designator(self) -> Designator:
+        """<property> Returns a designator of the game size and name
+
+        Returns:
+            [tuple]  (rows, cols, name)
+        """
+        return (*self._size, self._name)
+
+
+    @property
+    def games_list(self) -> GamesList:
+        """<property> get a list of games
+
+        Returns:
+            A list of the preset and loaded games
+
+            TODO: see if this is needed, delete if unused
+        """
+        return self._games_list
+
+
+    @property
+    def games_names_list(self) -> list[str]:
         """Property: get a list of game names
 
         Returns:
@@ -630,11 +368,11 @@ class Game:
         return [ t[0] for t in self._games_list]
 
 
-    def grid_copy(self) -> npt.NDArray[np.bool_]:
-        """Get a copy of the actual grid data of the active grid
+    def grid_data(self) -> npt.NDArray:
+        """Get a copy of the actual grid data of the game
 
         Returns:
-            Copy of NDArray[bool] grid array
+            [NDArray]  numpy array of grid data
         """
         return self._grid.data_copy()
 
@@ -645,7 +383,7 @@ class Game:
         Returns:
             Tuple (rows, cols)
         """
-        return self._grid.size()
+        return self._grid.size
 
 
     @property
@@ -707,11 +445,11 @@ class Game:
         """
         self._grid.clear()
         if rows>0 and cols>0:
-            self._grid.resize(rows=rows, cols=cols)
+            self._grid.resize(size=(rows, cols))
         self._live_cells = 0
 
 
-    def resize(self, rows:int, cols:int, *, anchor:Literal["ctr", "nw", "n", "ne", "w", "e", "sw", "s", "se"]="nw"):
+    def resize(self, rows:int, cols:int, *, anchor:ResizeAnchor="nw"):
         """Resize the grid in the Game object
 
         Args:
@@ -721,12 +459,12 @@ class Game:
             anchor: Anchor position {default "nw"}
                     ["nw", "n", "ne", "w", "ctr", "e", "sw", "s", "se"]
         """
-        self._grid.resize(rows=rows, cols=cols, anchor=anchor)
+        self._grid.resize(size=(rows, cols), anchor=anchor)
         self._live_cells = self._grid.live_count
 
 
     @staticmethod
-    def __rules_warp(grid_now:Grid, grid_next:Grid) -> int:
+    def __rules_warp(grid_now:CellArray, grid_next:CellArray, rules:RuleSpec) -> int:
         """Execute rules for grid with warp at edges
 
         Args:
@@ -737,42 +475,40 @@ class Game:
             live cell count for the new generation
         """
         live_cells : int = 0
-        nr, nc = grid_next.size()
+        nr, nc = grid_next.size
+        set_born, set_survive = rules
         for i in range(nr):
             for j in range(nc):
                 # get our current state of life
-                life = grid_now[i, j]
+                life_now = grid_now[i, j]
 
                 # count the neighbors
-                neighbors = 0
+                live_neighbors = 0
                 for k in range(-1, 2): # -1, 0, 1
-                    if grid_now[i+k, j-1]: neighbors += 1
-                    if grid_now[i+k, j+1]: neighbors += 1
-                if grid_now[i-1,j]: neighbors += 1
-                if grid_now[i+1,j]: neighbors += 1
+                    if grid_now[i+k, j-1]: live_neighbors += 1
+                    if grid_now[i+k, j+1]: live_neighbors += 1
+                if grid_now[i-1,j]: live_neighbors += 1
+                if grid_now[i+1,j]: live_neighbors += 1
 
-                # rules:
-                if life and neighbors < 2:
-                    # live cell with < 2 neighbors dies by underpopulation
-                    life = False
-                elif life and neighbors > 3:
-                    # live cell with > 3 neighbors dies by overpopulation
-                    life = False
-                elif not life and neighbors == 3:
-                    # dead cell with 3 neighbors is born by reproduction
-                    life = True
+                # rules
+                if life_now and live_neighbors not in set_survive:
+                    # living cell does not survive
+                    life_next = False
+                elif not life_now and live_neighbors in set_born:
+                    # dead cell is born
+                    life_next = True
                 else:
                     # life goes on
-                    pass
+                    life_next = life_now
 
-                if life: live_cells += 1
-                grid_next[i, j] = life
+                if life_now: live_cells += 1
+                grid_next[i, j] = life_next
 
         return live_cells
 
 
     @staticmethod
-    def __disintegrate_at_edges(grid:Grid, live_cells:int) -> int:
+    def __disintegrate_at_edges(grid:CellArray, live_cells:int) -> int:
         """Disintegrate structures at edges: Breadth-First Search (BFS) algorithm
 
         Args:
@@ -782,7 +518,7 @@ class Game:
         Returns:
             live cell count after disintegration
         """
-        n_rows, n_cols = grid.size()
+        n_rows, n_cols = grid.size
         visited = set()
         to_kill = set()
 
@@ -827,7 +563,7 @@ class Game:
         return live_cells
 
 
-    def step(self) -> int:
+    def advance_generation(self) -> int:
         """Generate the next evolution step in the Game of Life
 
         Returns:
@@ -836,9 +572,9 @@ class Game:
         ##idx_now = self._idx
         ##idx_next = 0 if idx_now else 1
         grid_now = self._grid
-        grid_next = Grid(rows=grid_now.rows, cols=grid_now.cols)
+        grid_next = CellArray(size=(grid_now.rows, grid_now.cols))
         grid_next.clear()
-        live_cells = self.__rules_warp(grid_now, grid_next)
+        live_cells = self.__rules_warp(grid_now, grid_next, self._rule_spec)
         if not self._is_warp:
             live_cells = self.__disintegrate_at_edges(grid_next, live_cells)
         ##self._idx = idx_next
@@ -872,7 +608,7 @@ class Game:
         Returns:
             "Game(rows=#, cols=#, live_cells=#)"
         """
-        nr, nc = self._grid.size()
+        nr, nc = self._grid.size
         n_live = self._grid.live_count
         return f"Game(rows={nr}, cols={nc}, live_cells={n_live})"
 
