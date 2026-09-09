@@ -24,8 +24,9 @@
 #    py -m pip install numpy wxPython
 #  to install the required Python packages
 #
-#  Created    : 2026-09-05
-#  Modified   : 2026-09-05
+#  Change log:
+#    2026-09-05  KSM  Created
+#    2026-09-09  KSM  Updated version to 1.1
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -52,7 +53,7 @@ class CGOL(frmMain):
 
     @classmethod
     def static_init(cls):
-        cls.VERSION = "1.0"
+        cls.VERSION = "1.1"
         cls.INITIAL_GAME_IDX = 0
         cls.BACKGROUND_COLOR = (240, 240, 240)  # backgnd (red, green, blue)
         cls.LIVE_CELL_COLOR  = (0, 0, 0)        # live cell (red, green, blue)

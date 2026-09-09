@@ -13,8 +13,9 @@
 #    maintains the game grid. It interfaces between the GUI frame and the
 #    game engine.
 #
-#  Created    : 2026-09-05
-#  Modified   : 2026-09-05
+#  Change log:
+#    2026-09-05  KSM  Created
+#    2026-09-09  KSM  Changed rendering to buffered DC
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -50,7 +51,7 @@ class pnlGameGrid(wx.Panel):
         self._is_paused : bool = True
         self._grid_data = self._engine.grid_data()
 
-        dc = wx.ScreenDC()
+        self._buffer_bitmap = wx.Bitmap(1,1)
         self.w_cell = 0
         self.h_cell = 0
 
@@ -86,6 +87,7 @@ class pnlGameGrid(wx.Panel):
         """
         live_cells = self._engine.advance_generation()
         self._sync_from_engine()
+        self.__render_grid_to_buffer()
         return live_cells
 
 
@@ -261,14 +263,11 @@ class pnlGameGrid(wx.Panel):
         return False
 
 
-    def on_paint(self, event:wx.PaintEvent):
-        """EVT_PAINT hanndler for the game grid panel; draws the panel
-
-        Args:
-            event: [wx.PaintEvent]
+    def __render_grid_to_buffer(self):
+        """Render the bitmap DC
         """
         # --- Start with a fresh, blank canvas ---
-        dc = wx.BufferedPaintDC(self)
+        dc = wx.MemoryDC(self._buffer_bitmap)
         dc.SetBackground(wx.Brush(self.GetBackgroundColour()))
         dc.Clear()
 
@@ -284,6 +283,14 @@ class pnlGameGrid(wx.Panel):
                     y = r * self.h_cell
                     dc.DrawRectangle(x, y, self.w_cell, self.h_cell)
 
+
+    def on_paint(self, event:wx.PaintEvent):
+        """EVT_PAINT hanndler for the game grid panel; draws the panel
+
+        Args:
+            event: [wx.PaintEvent]
+        """
+        _ = wx.BufferedDC(wx.PaintDC(self), self._buffer_bitmap)
         event.Skip()
 
 
@@ -326,6 +333,10 @@ class pnlGameGrid(wx.Panel):
         Args:
             event: [wx.SizeEvent]
         """
+        w, h = self.GetClientSize()
+        if w>0 and h>0:
+            self._buffer_bitmap = wx.Bitmap(w, h)
+            self.__render_grid_to_buffer()
         event.Skip()
 
 

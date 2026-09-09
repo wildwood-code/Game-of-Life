@@ -16,8 +16,9 @@
 #    My grid warps at the boundaries. Patterns like Gosper's Glider Gun will
 #    eventually collide and cease working correctly.
 #
-#  Created    : 2026-09-05
-#  Modified   : 2026-09-05
+#  Change log:
+#    2026-09-05  KSM  Created
+#    2026-09-09  KSM  Replaced "indexed grid" with single-grid
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -386,9 +387,8 @@ class Game:
             # make a copy of the Game object that was supplied
             self._name = obj._name
             self._is_warp = obj._is_warp
-            self._grid = [Grid(obj._grid[0]), Grid(obj._grid[1])]
+            self._grid = Grid(obj._grid)
             self._rows, self._cols = obj._rows, obj._cols
-            self._idx = obj._idx
             self._games_list : list[tuple[str, int, int, bool, str]] = obj._games_list.copy()
             self._live_cells = obj._live_cells
 
@@ -396,9 +396,8 @@ class Game:
             # initialize to empty Game
             self._name = ""
             self._is_warp = True
-            self._grid = [Grid(), Grid()]
+            self._grid = Grid()
             self._rows, self._cols = 0, 0
-            self._idx = 0
             self._games_list : list[tuple[str, int, int, bool, str]] = Game.GAMES.copy()
             self._live_cells = 0
 
@@ -415,17 +414,14 @@ class Game:
         """
         if pattern:
             # game grid from pattern
-            self._grid = [ Grid(pattern, rows=rows, cols=cols),
-                           Grid(rows=rows, cols=cols) ]
+            self._grid = Grid(pattern, rows=rows, cols=cols)
         else:
             # empty game grid
-            self._grid = [ Grid(rows=rows, cols=cols),
-                           Grid(rows=rows, cols=cols) ]
+            self._grid = Grid(rows=rows, cols=cols)
 
         self._name = name.strip()
-        self._rows, self._cols = self._grid[0].size()
-        self._idx = 0  # points at the active grid
-        self._live_cells = self._grid[0].live_count
+        self._rows, self._cols = self._grid.size()
+        self._live_cells = self._grid.live_count
         self._is_warp = is_warp
         self._register_game()
 
@@ -446,11 +442,9 @@ class Game:
         n_cols = my_game_spec[2]
         self._name = my_game_spec[0].strip()
         self._is_warp = my_game_spec[3]
-        self._grid = [Grid(my_game_spec[4], rows=n_rows, cols=n_cols),
-                    Grid(rows=n_rows, cols=n_cols)]
-        self._live_cells = self._grid[0].live_count
-        self._rows, self._cols = self._grid[0].size()
-        self._idx = 0  # points at the active grid
+        self._grid = Grid(my_game_spec[4], rows=n_rows, cols=n_cols)
+        self._live_cells = self._grid.live_count
+        self._rows, self._cols = self._grid.size()
 
         return (self._rows, self._cols, self._name)
 
@@ -540,7 +534,7 @@ class Game:
                 _, rows, cols, _, pattern = load_result
                 if rows==self._rows and cols==self._cols and pattern:
                     # if we made it this far, pattern should be valid
-                    self._grid[self._idx] = Grid(pattern, rows=rows, cols=cols)
+                    self._grid = Grid(pattern, rows=rows, cols=cols)
                     result = True
         return result
 
@@ -642,7 +636,7 @@ class Game:
         Returns:
             Copy of NDArray[bool] grid array
         """
-        return self._grid[self._idx].data_copy()
+        return self._grid.data_copy()
 
 
     def size(self) -> tuple[int,int]:
@@ -651,7 +645,7 @@ class Game:
         Returns:
             Tuple (rows, cols)
         """
-        return self._grid[self._idx].size()
+        return self._grid.size()
 
 
     @property
@@ -711,12 +705,9 @@ class Game:
             rows: rows dimension. Default=0 -> do not resize rows
             cols: columns dimension. Default=0 -> do not resize cols
         """
-        self._grid[0].clear()
-        self._grid[1].clear()
+        self._grid.clear()
         if rows>0 and cols>0:
-            self._grid[0].resize(rows=rows, cols=cols)
-            self._grid[1].resize(rows=rows, cols=cols)
-        self._idx = 0
+            self._grid.resize(rows=rows, cols=cols)
         self._live_cells = 0
 
 
@@ -730,9 +721,8 @@ class Game:
             anchor: Anchor position {default "nw"}
                     ["nw", "n", "ne", "w", "ctr", "e", "sw", "s", "se"]
         """
-        self._grid[0].resize(rows=rows, cols=cols, anchor=anchor)
-        self._grid[1].resize(rows=rows, cols=cols, anchor=anchor)
-        self._live_cells = self._grid[self._idx].live_count
+        self._grid.resize(rows=rows, cols=cols, anchor=anchor)
+        self._live_cells = self._grid.live_count
 
 
     @staticmethod
@@ -843,15 +833,16 @@ class Game:
         Returns:
             Number of live cells
         """
-        idx_now = self._idx
-        idx_next = 0 if idx_now else 1
-        grid_now = self._grid[idx_now]
-        grid_next = self._grid[idx_next]
+        ##idx_now = self._idx
+        ##idx_next = 0 if idx_now else 1
+        grid_now = self._grid
+        grid_next = Grid(rows=grid_now.rows, cols=grid_now.cols)
         grid_next.clear()
         live_cells = self.__rules_warp(grid_now, grid_next)
         if not self._is_warp:
             live_cells = self.__disintegrate_at_edges(grid_next, live_cells)
-        self._idx = idx_next
+        ##self._idx = idx_next
+        self._grid = grid_next
         self._live_cells = live_cells
         return live_cells
 
@@ -872,7 +863,7 @@ class Game:
         Returns:
             String representing the current grid. Newlines separate rows.
         """
-        return str(self._grid[self._idx])
+        return str(self._grid)
 
 
     def __repr__(self) -> str:
@@ -881,8 +872,8 @@ class Game:
         Returns:
             "Game(rows=#, cols=#, live_cells=#)"
         """
-        nr, nc = self._grid[self._idx].size()
-        n_live = self._grid[self._idx].live_count
+        nr, nc = self._grid.size()
+        n_live = self._grid.live_count
         return f"Game(rows={nr}, cols={nc}, live_cells={n_live})"
 
 
@@ -895,7 +886,7 @@ class Game:
         Returns:
             True == live cell; False == dead cell
         """
-        return self._grid[self._idx][key]
+        return self._grid[key]
 
 
     def __setitem__(self, key:tuple[int,int], value:bool):
@@ -905,13 +896,13 @@ class Game:
             key:   [tuple] (row, col)
             value: [bool] True => live cell; False => dead cell
         """
-        cell = self._grid[self._idx][key]
+        cell = self._grid[key]
         if cell != value:
             if value:
                 self._live_cells += 1
             else:
                 self._live_cells -= 1
-        self._grid[self._idx][key] = value
+        self._grid[key] = value
 
 
 # ******************************************************************************
