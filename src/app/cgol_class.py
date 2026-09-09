@@ -266,7 +266,7 @@ class Grid:
                     cols_l = add_cols
 
             if add_cols > 0:
-                data = np.hstack((np.zeros((my_rows, cols_l), dtype=bool), self._data, np.zeros((my_rows, cols_r), dtype=bool)), dtype=bool)
+                data = np.hstack((np.zeros((my_rows, cols_l), dtype=bool), self._data, np.zeros((my_rows, cols_r), dtype=bool)))
                 self._data = data
                 self._nc = cols
 
@@ -380,9 +380,6 @@ class Game:
 
         Args:
             obj:  {optional} Game object. Make self a copy if obj is passed.
-            rows: Number of grid rows. Defaults to 0.
-            cols: Number of grid cols. Defaults to 0.
-            init: Initialization string
         """
 
         if isinstance(obj, Game):
@@ -442,8 +439,6 @@ class Game:
         Returns:
             [tuple] (rows, cols, name)
         """
-        self._name = ""
-
         Ngames = len(self._games_list)
         igame = preset % Ngames
         my_game_spec = self._games_list[igame]
@@ -513,8 +508,7 @@ class Game:
         """
         try:
             with open(filename, 'r') as file:
-                load_result = Game.__read_from_open_file(file)
-                if load_result:
+                if load_result := Game.__read_from_open_file(file):
                     name, rows, cols, is_warp, my_pattern = load_result
                 try:
                     self.load_pattern(pattern=my_pattern, name=name, rows=rows, cols=cols, is_warp=is_warp)
@@ -587,7 +581,7 @@ class Game:
 
 
     def save_file(self, filename:str, *, name:str="") -> bool:
-        """_summary_
+        """Saves the game as a .cgol file
 
         Args:
             filename: [str] filename of the file to be saved
@@ -701,7 +695,7 @@ class Game:
 
 
     @is_warp.setter
-    def is_warp(self, warp):
+    def is_warp(self, warp:bool):
         """Setter: is_warp
 
         Args:
