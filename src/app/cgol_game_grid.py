@@ -15,7 +15,7 @@
 #
 #  Change log:
 #    2026-09-05  KSM  Created
-#    2026-09-09  KSM  Changed rendering to buffered DC
+#    2026-09-09  KSM  Changed rendering to buffered DC; reduced flickering
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -58,6 +58,9 @@ class pnlGameGrid(wx.Panel):
         self.SetMinSize(wx.Size(self.w_cell * self.cols, self.h_cell * self.rows))
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_SIZE, self.on_size_panel)
+        self.Bind(wx.EVT_ERASE_BACKGROUND, self.on_erase_background)
+
+        self.SetDoubleBuffered(True)
 
 
     def configure(self, *,
@@ -338,6 +341,18 @@ class pnlGameGrid(wx.Panel):
             self._buffer_bitmap = wx.Bitmap(w, h)
             self.__render_grid_to_buffer()
         event.Skip()
+
+
+    def on_erase_background(self, event:wx.Event):
+        """EVT_ERASE_BACKGROUND handler
+
+        Catch this event and do nothing. This will eliminate flickering.
+
+        Args:
+            event: [wx.Event]  not used
+        """
+        pass
+        # event.Skip()  do not call self.Skip()
 
 
 # ******************************************************************************
