@@ -15,6 +15,7 @@
 #  Change log:
 #    2026-09-05  KSM  Created
 #    2026-09-09  KSM  Changed class Game to newer CGOL_Game
+#    2026-09-11  KSM  Implemented rules select/change
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -49,13 +50,46 @@ class GameEngine:
 
 
     @property
-    def games_list(self) -> list[str]:
+    def rules(self) -> str:
+        """GameEngine property: rules
+
+        Returns:
+            [str]   rules in B/S form: ex/ "B3/S23"
+        """
+        return self._game.rules
+
+
+    @rules.setter
+    def rules(self, rules:str):
+        """GameEngine property: rules setter
+
+        Args:
+            rules: [str]   rules in B/S form: ex/ "B3/S23"
+        """
+        self._game.rules = rules
+
+
+    @property
+    def games_names_list(self) -> list[str]:
         """GameEngine property: list of all games
 
         Returns:
             List of the names of all preset and loaded games
         """
         return self._game.games_names_list
+
+
+    @property
+    def games_rules_list(self) -> list[str]:
+        """GameEngine property: list of all unique rule sets
+
+        Returns:
+            Set of unique rules of all preset and loaded games
+        """
+        games = self._game.games_list
+        all_rules = { g[4] for g in games }
+        return sorted(list(all_rules))
+
 
 
     @property

@@ -26,7 +26,8 @@
 #
 #  Change log:
 #    2026-09-05  KSM  Created
-#    2026-09-09  KSM  Updated version to 1.1 and later to 1.1.1
+#    2026-09-09  KSM  Updated version to 1.1 and later to 1.2
+#    2026-09-11  KSM  Implemented rules select/change; v1.3
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -53,7 +54,7 @@ class CGOL(frmMain):
 
     @classmethod
     def static_init(cls):
-        cls.VERSION = "1.2"
+        cls.VERSION = "1.3"
         cls.INITIAL_GAME_IDX = 0
         cls.BACKGROUND_COLOR = (240, 240, 240)  # backgnd (red, green, blue)
         cls.LIVE_CELL_COLOR  = (0, 0, 0)        # live cell (red, green, blue)
@@ -68,13 +69,14 @@ class CGOL(frmMain):
 
 
     class STATUS:
-        N_FIELDS : int = 4
-        FIELD_WIDTHS : list[int] = [80, 120, 120, -1]
+        N_FIELDS : int = 5
+        FIELD_WIDTHS : list[int] = [80, 120, 80, 80, -1]
         class IDX(IntEnum):
             FIELD_STATE = 0             # game state: running/paused
             FIELD_LIVE = 1              # number of live cells
             FIELD_GRID = 2              # grid size
-            FIELD_MESSAGE = 3           # message field
+            FIELD_RULES = 3             # rules
+            FIELD_MESSAGE = 4           # message field
 
 
     def __init__(self, parent):
@@ -145,9 +147,17 @@ class CGOL(frmMain):
         self.update_toolbar()
 
         # --- Configure game selector combo box ---
-        games_list = self.pnlGrid.games_list
+        games_list = self.pnlGrid.games_names_list
         self.cmbGame.Set(CGOL.COMBO_ACTION_ITEMS + games_list)
         self.cmbGame.SetSelection(len(CGOL.COMBO_ACTION_ITEMS) + CGOL.INITIAL_GAME_IDX)
+
+        # --- Configure rule selector combo box ---
+        rules_list = self.pnlGrid.games_rules_list
+        self.rules = self.pnlGrid.rules
+        self.extra_rules_list = []
+        idx_rule = rules_list.index(self.rules)
+        self.cmbRules.Set(rules_list + self.extra_rules_list)
+        self.cmbRules.SetSelection(idx_rule)
 
         # --- Set warp status ---
         self.tbarMain.ToggleTool(self.TOOL_ID_WARP, self.is_warp)
@@ -200,6 +210,24 @@ class CGOL(frmMain):
         self.tmrGame.Start(self.timer_period_ms)
 
         self.is_initialized = True
+
+
+    def __register_rules(self, rules:str):
+        """Register a new set of game rules in the extra rules list. Only add if unique.
+
+        Register new rules on load or if entered via the rules dialog.
+
+        Args:
+            rules: [str]  rules to add in B/S form
+        """
+        rules = rules.upper()
+        rules_list = self.pnlGrid.games_rules_list + self.extra_rules_list
+        if rules not in rules_list:
+            rules_list.append(rules)
+            self.extra_rules_list.append(rules)
+            self.cmbRules.Set(rules_list)
+        idx = rules_list.index(rules)
+        self.cmbRules.SetSelection(idx)
 
 
     def show_message(self, message:str="", time_ms:int=0):
@@ -266,6 +294,8 @@ class CGOL(frmMain):
 
 
     def update_status_bar(self):
+        """Update the text on the status bar
+        """
         # Paused/running field
         if self.is_paused:
             self.stabStatusBar.SetStatusText("Paused", CGOL.STATUS.IDX.FIELD_STATE)
@@ -277,6 +307,9 @@ class CGOL(frmMain):
 
         # Grid size field (clickable)
         self.stabStatusBar.SetStatusText(f"{self.rows} x {self.cols}", CGOL.STATUS.IDX.FIELD_GRID)
+
+        # Rules field (clickable)
+        self.stabStatusBar.SetStatusText(f"{self.rules}", CGOL.STATUS.IDX.FIELD_RULES)
 
 
     def on_panel_click(self, event:wx.MouseEvent):
@@ -465,23 +498,74 @@ class CGOL(frmMain):
                 break
 
         # act depending upon the field
-        if idx_field == CGOL.STATUS.IDX.FIELD_GRID:
+        if idx_field == CGOL.STATUS.IDX.FIELD_STATE:
+            if self.pnlGrid.is_paused:
+                self.show_message("Click the green triangle to play")
+            else:
+                self.show_message("Click the yellow bars to pause")
+
+        elif idx_field == CGOL.STATUS.IDX.FIELD_LIVE:
+            self.show_message(f"The live cell count is {self.live_cells}")
+
+        elif idx_field == CGOL.STATUS.IDX.FIELD_GRID:
             # edit grid size
+            self.is_paused = True
+            self.pnlGrid.is_paused = True
             self.show_message("Resizing grid...")
-            dialog = dlgGetDims(self)
-            dialog.spinRows.SetValue(self.rows)
-            dialog.spinCols.SetValue(self.cols)
-            dialog.SetTitle("Resize: enter dimensions")
-            if (result := dialog.ShowModal()) == wx.ID_OK:
-                rows_gen = dialog.spinRows.GetValue()
-                cols_gen = dialog.spinCols.GetValue()
+            dlg = dlgGetDims(self)
+            dlg.spinRows.SetValue(self.rows)
+            dlg.spinCols.SetValue(self.cols)
+            dlg.m_sdbSizerButtonsOK.SetDefault()
+            dlg.SetTitle("Resize: enter dimensions")
+            if dlg.ShowModal() == wx.ID_OK:
+                rows_gen = dlg.spinRows.GetValue()
+                cols_gen = dlg.spinCols.GetValue()
                 self.pnlGrid.resize_game(size=(rows_gen, cols_gen))
                 self.rows, self.cols = self.pnlGrid.size()
                 self.live_cells = self.pnlGrid.live_cells
                 self.SendSizeEvent()
-                self.update_status_bar()
-                self.Refresh()
+                self.show_message(f"Resized grid to {self.rows}x{self.cols}")
 
+        elif idx_field == CGOL.STATUS.IDX.FIELD_RULES:
+            self.is_paused = True
+            self.pnlGrid.is_paused = True
+            my_rules = self.rules
+            self.show_message("Changing the rules...")
+            dlg = wx.TextEntryDialog(None, message="Enter rules in B/S form", caption="Rules", value=my_rules)
+            if dlg.ShowModal() == wx.ID_OK:
+                user_input = dlg.GetValue()
+                try:
+                    self.pnlGrid.rules = user_input.upper()
+                except:
+                    # restore if it did not work
+                    self.pnlGrid.rules = my_rules
+                self.rules = self.pnlGrid.rules
+                self.__register_rules(self.rules)
+                self.show_message(f"Changed rules to {self.rules}")
+
+        elif idx_field == CGOL.STATUS.IDX.FIELD_MESSAGE:
+            self.show_message("You clicked in the message area")
+
+        self.update_toolbar()
+        self.update_status_bar()
+        self.Refresh()
+        event.Skip()
+
+
+    def on_rules_select(self, event:wx.CommandEvent):
+        """EVT_COMBOBOX for the rules select combo box
+
+        Args:
+            event: [wx.CommandEvent]
+        """
+        self.is_paused = True
+        rules = self.cmbRules.GetValue()
+        self.rules = rules
+        self.pnlGrid.rules = rules
+        self.update_status_bar()
+        self.update_toolbar()
+        self.show_message(f"Rules: {rules}")
+        self.Refresh()
         event.Skip()
 
 
@@ -491,13 +575,15 @@ class CGOL(frmMain):
         Args:
             event: [wx.CommandEvent]
         """
+        self.is_paused = True
         n_action_items = len(CGOL.COMBO_ACTION_ITEMS)
         sel = self.cmbGame.GetSelection()
         if sel >= n_action_items:
-            self.is_paused = True
             self.update_toolbar()
             idx = sel - n_action_items
             self.pnlGrid.load_preset(idx)
+            self.rules = self.pnlGrid.rules
+            self.__register_rules(self.rules)
         else:
             if sel == 0:
                 # New game
@@ -508,18 +594,20 @@ class CGOL(frmMain):
                     rows_gen = dialog.spinRows.GetValue()
                     cols_gen = dialog.spinCols.GetValue()
                     self.pnlGrid.new_game(size=(rows_gen, cols_gen))
+                    self.rules = self.pnlGrid.rules
+                    self.__register_rules(self.rules)
                     self.rows, self.cols = self.pnlGrid.size()
-                    #self.SendSizeEvent()
-                    #self.Refresh()
             elif sel == 1:
                 # Load game
                 self.show_message("Loading game...")
                 self.pnlGrid.load_file()
+                self.rules = self.pnlGrid.rules
+                self.__register_rules(self.rules)
             elif sel == 2:
                 # Save game
                 self.show_message("Saving game...")
                 self.pnlGrid.save_file()
-            games_list = self.pnlGrid.games_list
+            games_list = self.pnlGrid.games_names_list
             self.cmbGame.Set(CGOL.COMBO_ACTION_ITEMS + games_list)
             name_of_game = self.pnlGrid.name_of_game
             if name_of_game in games_list:

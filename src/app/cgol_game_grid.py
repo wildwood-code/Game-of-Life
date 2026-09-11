@@ -16,6 +16,7 @@
 #  Change log:
 #    2026-09-05  KSM  Created
 #    2026-09-09  KSM  Changed rendering to buffered DC; reduced flickering
+#    2026-09-11  KSM  Implemented rules select/change
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -127,13 +128,43 @@ class pnlGameGrid(wx.Panel):
 
 
     @property
-    def games_list(self) -> list[str]:
+    def games_names_list(self) -> list[str]:
         """Property: list of preset and loaded games
 
         Returns:
             Returns a list of names of preset and loaded games
         """
-        return self._engine.games_list
+        return self._engine.games_names_list
+
+
+    @property
+    def games_rules_list(self) -> list[str]:
+        """Property: list of rules
+
+        Returns:
+            List of unique rules of preset and loaded games
+        """
+        return self._engine.games_rules_list
+
+
+    @property
+    def rules(self) -> str:
+        """Property: rules
+
+        Returns:
+            [str]   rules in B/S form: ex/ "B3/S23"
+        """
+        return self._engine.rules
+
+
+    @rules.setter
+    def rules(self, rules:str):
+        """Property: rules setter
+
+        Args:
+            rules: [str]   rules in B/S form: ex/ "B3/S23"
+        """
+        self._engine.rules = rules
 
 
     @property
@@ -324,6 +355,7 @@ class pnlGameGrid(wx.Panel):
                     self._grid_data[row, col] = cell
 
                 # --- Force the panel to refresh/repaint the screen ---
+                self.__render_grid_to_buffer()
                 self.Refresh()
 
         # --- Allow the event to propagate further if needed ---

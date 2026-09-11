@@ -18,6 +18,7 @@
 #
 #  Change log:
 #    2026-09-09  KSM  Created
+#    2026-09-11  KSM  Minor bug fix in _encode_rules()
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -27,8 +28,12 @@ from typing import Protocol, Self
 import numpy.typing as npt
 import re
 
+# Designator (rows, cols, name)
 type Designator = tuple[int, int, str]|None
-type GameSpec = tuple[str, int, int, bool, str]
+
+# GameSpec: (name, rows, cols, is_warp, rules, pattern)
+type GameSpec = tuple[str, int, int, bool, str, str]
+
 type GamesList = list[GameSpec]
 type ValueTypes = bool|int
 type RuleSpec = tuple[set[int], set[int]]
@@ -186,10 +191,8 @@ class Game(Protocol):
             of those numbers in the survival set, then it survies otherwise it
             dies.
         """
-        set_b = spec[0]
-        set_s = spec[1]
-        code_b = [ str(c) for c in sorted(set_b)]
-        code_s = [ str(c) for c in sorted(set_s)]
+        code_b = "".join(str(c) for c in sorted(spec[0]))
+        code_s = "".join(str(c) for c in sorted(spec[1]))
         return f"B{code_b}/S{code_s}"
 
 

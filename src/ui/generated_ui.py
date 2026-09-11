@@ -38,6 +38,15 @@ class frmMain ( wx.Frame ):
         self.tbarMain.AddControl( self.cmbGame )
         self.tbarMain.AddSeparator()
 
+        cmbRulesChoices = [ u"B3/S23" ]
+        self.cmbRules = wx.ComboBox( self.tbarMain, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.Size( 100,-1 ), cmbRulesChoices, wx.CB_READONLY )
+        self.cmbRules.SetSelection( 0 )
+        self.cmbRules.SetToolTip( u"Select rules" )
+        self.cmbRules.SetMinSize( wx.Size( 100,-1 ) )
+
+        self.tbarMain.AddControl( self.cmbRules )
+        self.tbarMain.AddSeparator()
+
         self.toolWarp = self.tbarMain.AddTool( wx.ID_ANY, u"Warp", wx.ArtProvider.GetBitmap( wx.ART_TIP, wx.ART_TOOLBAR ), wx.NullBitmap, wx.ITEM_CHECK, u"Warp at edge", wx.EmptyString, None )
 
         self.tbarMain.AddSeparator()
@@ -90,6 +99,7 @@ class frmMain ( wx.Frame ):
         self.Bind( wx.EVT_TOOL, self.on_click_play, id = self.toolPlay.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_click_step, id = self.toolStep.GetId() )
         self.cmbGame.Bind( wx.EVT_COMBOBOX, self.on_game_select )
+        self.cmbRules.Bind( wx.EVT_COMBOBOX, self.on_rules_select )
         self.Bind( wx.EVT_TOOL, self.on_click_warp, id = self.toolWarp.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_take_snap, id = self.toolTakeSnap.GetId() )
         self.Bind( wx.EVT_TOOL, self.on_restore_snap, id = self.toolRestoreSnap.GetId() )
@@ -117,6 +127,9 @@ class frmMain ( wx.Frame ):
         event.Skip()
 
     def on_game_select( self, event ):
+        event.Skip()
+
+    def on_rules_select( self, event ):
         event.Skip()
 
     def on_click_warp( self, event ):
@@ -187,14 +200,14 @@ class dlgGetDims ( wx.Dialog ):
 
         bSizer3 = wx.BoxSizer( wx.HORIZONTAL )
 
-        m_sdbSizer1 = wx.StdDialogButtonSizer()
-        self.m_sdbSizer1OK = wx.Button( self, wx.ID_OK )
-        m_sdbSizer1.AddButton( self.m_sdbSizer1OK )
-        self.m_sdbSizer1Cancel = wx.Button( self, wx.ID_CANCEL )
-        m_sdbSizer1.AddButton( self.m_sdbSizer1Cancel )
-        m_sdbSizer1.Realize()
+        m_sdbSizerButtons = wx.StdDialogButtonSizer()
+        self.m_sdbSizerButtonsOK = wx.Button( self, wx.ID_OK )
+        m_sdbSizerButtons.AddButton( self.m_sdbSizerButtonsOK )
+        self.m_sdbSizerButtonsCancel = wx.Button( self, wx.ID_CANCEL )
+        m_sdbSizerButtons.AddButton( self.m_sdbSizerButtonsCancel )
+        m_sdbSizerButtons.Realize()
 
-        bSizer3.Add( m_sdbSizer1, 1, wx.EXPAND, 5 )
+        bSizer3.Add( m_sdbSizerButtons, 1, wx.EXPAND, 5 )
 
 
         bSizer2.Add( bSizer3, 1, wx.EXPAND, 5 )

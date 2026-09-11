@@ -18,6 +18,7 @@
 #
 #  Change log:
 #    2026-09-09  KSM  Created
+#    2026-09-11  KSM  Minor change in constructor to allow "" init-string
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -124,7 +125,10 @@ class CellArray[T]:
             self._nc : int = 0
             self._dtype : type = dtype if dtype is not None else bool
             self._data : npt.NDArray = np.zeros((0,0), dtype=self._dtype)
-            if isinstance(obj, str):
+            if not obj:
+                # empty string -> leave grid blank
+                pass
+            elif isinstance(obj, str):
                 # lines are separated by newlines
                 # translation function is called to map str -> val
                 success = False

@@ -22,6 +22,7 @@
 #                     Replaced Grid with CellArray
 #                     Derive CGOL_Game from protocol class Game
 #                     Added use of "B/S" rules specifier (defaults to B3/S23)
+#    2026-09-11  KSM  Implemented rules select/change
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -35,16 +36,18 @@ import cgol_grids as grids
 from pathlib import Path
 import io
 from CellArray import CellArray, ResizeAnchor
-from Game_protocol import Game, Rules, RuleSpec, CellArraySize, Designator, GamesList
+from Game_protocol import Game, Rules, RuleSpec, CellArraySize, Designator, GamesList, GameSpec
 
 @static_init
 class CGOL_Game(Game):
 
     @classmethod
     def static_init(cls):
-        cls.GAMES : list[tuple[str, int, int, bool, str]] = \
+        cls.DEFAULT_RULES = "B3/S23"
+        cls.GAMES : list[GameSpec] = \
         [   # format: ("name", rows, cols, "init-string")
             grids.GRID_GLIDER,
+            grids.GRID_SPINNER,
             grids.GRID_BEACON,
             grids.GRID_TOAD,
             grids.GRID_BLINKER,
@@ -62,12 +65,14 @@ class CGOL_Game(Game):
         ]
 
 
-    def __init__(self, obj:"CGOL_Game|None"=None, rules:Rules="B3/S23"):
+    def __init__(self, obj:"CGOL_Game|None"=None):
         """Game constructor
 
         Args:
             obj:  {optional} Game object. Make self a copy if obj is passed.
         """
+
+        my_rules = Game._decode_rules(CGOL_Game.DEFAULT_RULES)
 
         if isinstance(obj, CGOL_Game):
             # make a copy of the Game object that was supplied
@@ -75,9 +80,9 @@ class CGOL_Game(Game):
             self._is_warp = obj._is_warp
             self._grid = CellArray(obj._grid, dtype=bool)
             self._rows, self._cols = obj._rows, obj._cols
-            self._games_list : list[tuple[str, int, int, bool, str]] = obj._games_list.copy()
+            self._games_list : list[GameSpec] = obj._games_list.copy()
             self._live_cells = obj._live_cells
-            self._rule_spec : RuleSpec = Game._decode_rules(rules)
+            self._rule_spec : RuleSpec = my_rules
 
         else:
             # initialize to empty Game
@@ -85,9 +90,9 @@ class CGOL_Game(Game):
             self._is_warp = True
             self._grid = CellArray(dtype=bool)
             self._rows, self._cols = 0, 0
-            self._games_list : list[tuple[str, int, int, bool, str]] = CGOL_Game.GAMES.copy()
+            self._games_list : list[GameSpec] = CGOL_Game.GAMES.copy()
             self._live_cells = 0
-            self._rule_spec : RuleSpec = Game._decode_rules(rules)
+            self._rule_spec : RuleSpec = my_rules
 
 
     @property
@@ -118,7 +123,7 @@ class CGOL_Game(Game):
         self._array : CellArray[bool] = CellArray[bool](size=self._size, dtype=bool)
 
 
-    def load_pattern(self, pattern:str, *, name:str, rows:int=0, cols:int=0, is_warp:bool=True):
+    def load_pattern(self, pattern:str, *, name:str, rows:int=0, cols:int=0, is_warp:bool=True, rules:str="B3/S23"):
         """Load a game from a pattern
 
         Args:
@@ -127,6 +132,7 @@ class CGOL_Game(Game):
             rows:    [int] number of rows; defaults to 0 -> auto
             cols:    [int] number of columns; defaults to 0 -> auto
             is_warp: [bool] True = warp at edge; False = disintegrate at edge
+            rules:   [str] rules spec in B/S form; default = "B3/S23"
         """
         if pattern:
             # game grid from pattern
@@ -139,6 +145,7 @@ class CGOL_Game(Game):
         self._rows, self._cols = self._grid.size
         self._live_cells = self._grid.live_count
         self._is_warp = is_warp
+        self._rule_spec = Game._decode_rules(rules)
         self._register_game()
 
 
@@ -158,15 +165,15 @@ class CGOL_Game(Game):
         n_cols = my_game_spec[2]
         self._name = my_game_spec[0].strip()
         self._is_warp = my_game_spec[3]
-        self._grid = CellArray(my_game_spec[4], size=(n_rows, n_cols))
+        self._rule_spec = Game._decode_rules(my_game_spec[4])
+        self._grid = CellArray(my_game_spec[5], size=(n_rows, n_cols))
         self._live_cells = self._grid.live_count
         self._rows, self._cols = self._grid.size
-
         return (self._rows, self._cols, self._name)
 
 
     @staticmethod
-    def __read_from_open_file(file: io.TextIOWrapper|io.StringIO) -> tuple[str, int, int, bool, str]|None:
+    def __read_from_open_file(file: io.TextIOWrapper|io.StringIO) -> GameSpec|None:
         """Read a game descriptor from an open file
 
         Args:
@@ -180,16 +187,24 @@ class CGOL_Game(Game):
         try:
             name = file.readline()
             rows_cols = file.readline()
-            if m := re.match(r"\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*(True|False)\s*$", rows_cols):
-                # new format: rows, cols, True/False
+            if m := re.match(r"\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*(True|False)\s*,\s*(B[1-8]+\/S[0-8]+)\s*$", rows_cols):
+                # 1.3 format: rows, cols, True/False
                 rows = int(m.group(1))
                 cols = int(m.group(2))
                 is_warp = not (m.group(3)=="False")
+                rules = m.group(4)
+            elif m := re.match(r"\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*(True|False)\s*$", rows_cols):
+                # 1.0 format: rows, cols, True/False
+                rows = int(m.group(1))
+                cols = int(m.group(2))
+                is_warp = not (m.group(3)=="False")
+                rules = "B3/S23"
             elif m := re.match(r"\s*([0-9]+)\s*,\s*([0-9]+)\s*$", rows_cols):
-                # old format: rows, cols
+                # 0.0 format: rows, cols
                 rows = int(m.group(1))
                 cols = int(m.group(2))
                 is_warp = True
+                rules = "B3/S23"
             else:
                 is_success = False
         except:
@@ -203,7 +218,7 @@ class CGOL_Game(Game):
             except:
                 is_success = False
         if is_success:
-            result = (name, rows, cols, is_warp, my_pattern)
+            result = (name, rows, cols, is_warp, rules, my_pattern)
         return result
 
 
@@ -219,9 +234,9 @@ class CGOL_Game(Game):
         try:
             with open(filename, 'r') as file:
                 if load_result := CGOL_Game.__read_from_open_file(file):
-                    name, rows, cols, is_warp, my_pattern = load_result
+                    name, rows, cols, is_warp, rules, my_pattern = load_result
                 try:
-                    self.load_pattern(pattern=my_pattern, name=name, rows=rows, cols=cols, is_warp=is_warp)
+                    self.load_pattern(pattern=my_pattern, name=name, rows=rows, cols=cols, is_warp=is_warp, rules=rules)
                 except:
                     raise ValueError()
         except IOError:
@@ -247,7 +262,7 @@ class CGOL_Game(Game):
         result = False
         with io.StringIO(snapshot) as file_like:
             if load_result := CGOL_Game.__read_from_open_file(file_like):
-                _, rows, cols, _, pattern = load_result
+                _, rows, cols, _, _, pattern = load_result
                 if rows==self._rows and cols==self._cols and pattern:
                     # if we made it this far, pattern should be valid
                     self._grid = CellArray(pattern, size=(rows, cols))
@@ -257,7 +272,7 @@ class CGOL_Game(Game):
 
     @staticmethod
     def __write_to_open_file(file: io.TextIOWrapper|io.StringIO,
-                             desc:tuple[str,int,int,bool,str]) -> bool:
+                             desc:GameSpec) -> bool:
         """Write a game descriptor to an open file
 
         Args:
@@ -268,11 +283,11 @@ class CGOL_Game(Game):
             True if successful; False otherwise
         """
         result = True
-        name, rows, cols, is_warp, pattern = desc
+        name, rows, cols, is_warp, rules, pattern = desc
         try:
             file.write(f"{name}\n")
             str_warp = "True" if is_warp else "False"
-            file.write(f"{rows}, {cols}, {str_warp}\n")
+            file.write(f"{rows}, {cols}, {str_warp}, {rules}\n")
             file.write(pattern)
         except:
             result = False
@@ -284,7 +299,8 @@ class CGOL_Game(Game):
         result = ""
         with io.StringIO() as file_like:
             pattern = str(self)
-            game_set = (self._name, self._rows, self._cols, self._is_warp, pattern)
+            rules = Game._encode_rules(self._rule_spec)
+            game_set = (self._name, self._rows, self._cols, self._is_warp, rules, pattern)
             if CGOL_Game.__write_to_open_file(file_like, game_set):
                 result = file_like.getvalue()
         return result
@@ -308,7 +324,8 @@ class CGOL_Game(Game):
                 else:
                     self._name = file_path.stem.strip()
                 pattern = str(self)
-                game_set = (self._name, self._rows, self._cols, self._is_warp, pattern)
+                rules = Game._encode_rules(self._rule_spec)
+                game_set = (self._name, self._rows, self._cols, self._is_warp, rules, pattern)
                 if CGOL_Game.__write_to_open_file(file, game_set):
                     self._register_game()
                 else:
@@ -323,17 +340,18 @@ class CGOL_Game(Game):
         if a game with the same name exists)
         """
         name = self._name
+        my_pattern = str(self)
+        my_rules = Game._encode_rules(self._rule_spec)
         if any(t[0]==name for t in self._games_list):
             # overwrite the matching games_list entry
             for idx in range(len(self._games_list)):
                 if self._games_list[idx][0] == name:
-                    entry = (name, self._rows, self._cols, self._is_warp, str(self))
+                    entry = (name, self._rows, self._cols, self._is_warp, my_rules, my_pattern)
                     self._games_list[idx] = entry
                     break
         else:
             # add a new games_list entry at the end
-            my_pattern = str(self)
-            self._games_list.append((name, self._rows, self._cols, self._is_warp, my_pattern))
+            self._games_list.append((name, self._rows, self._cols, self._is_warp, my_rules, my_pattern))
 
 
     @property
@@ -352,8 +370,6 @@ class CGOL_Game(Game):
 
         Returns:
             A list of the preset and loaded games
-
-            TODO: see if this is needed, delete if unused
         """
         return self._games_list
 
@@ -569,15 +585,12 @@ class CGOL_Game(Game):
         Returns:
             Number of live cells
         """
-        ##idx_now = self._idx
-        ##idx_next = 0 if idx_now else 1
         grid_now = self._grid
         grid_next = CellArray(size=(grid_now.rows, grid_now.cols))
         grid_next.clear()
         live_cells = self.__rules_warp(grid_now, grid_next, self._rule_spec)
         if not self._is_warp:
             live_cells = self.__disintegrate_at_edges(grid_next, live_cells)
-        ##self._idx = idx_next
         self._grid = grid_next
         self._live_cells = live_cells
         return live_cells

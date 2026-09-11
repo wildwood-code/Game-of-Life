@@ -7,11 +7,13 @@
 #  Description:
 #    This file contains several predefined CGoL games (grids)
 #
-#    format: ("name", rows, cols, "init-string"),
-#    tuple[str, int, int, str]
+#    format: ("name", rows, cols, is_warp, rules, "init-string"),
+#    tuple[str, int, int, bool, str, str]
 #
 #    "name" is the name of the grid pattern
 #    rows, cols specifies the normal grid size, the pattern is centered in the grid
+#    is_warp = True if warp-edges; False if non-warp edges
+#    rules in B/S format (ex/ standard CGoL is B3/S23)
 #    "init-string" is the pattern...
 #      one text row per pattern row
 #      one text column per pattern column
@@ -24,12 +26,22 @@
 #  Change log:
 #    2026-09-05  KSM  Created
 #    2026-09-09  KSM  Updated the comment to include this change log
+#    2026-09-11  KSM  Implemented rules select/change (new data field)
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
 
 GRID_GLIDER = (
-"Glider", 32, 32, True,
+"Glider", 32, 32, True, "B3/S23",
+"""\
+x.x
+.xx
+.x.
+"""
+)
+
+GRID_SPINNER = (   # Glider becomes a spinner with rules B3/S24
+"Spinner", 16, 16, True, "B3/S24",
 """\
 x.x
 .xx
@@ -38,7 +50,7 @@ x.x
 )
 
 GRID_BEACON = (
-"Beacon", 16, 16, True,
+"Beacon", 16, 16, True, "B3/S23",
 """\
 xx..
 xx..
@@ -48,7 +60,7 @@ xx..
 )
 
 GRID_PENTADECATHLON = (
-"Pentadecathlon-15", 48, 48, True,
+"Pentadecathlon-15", 48, 48, True, "B3/S23",
 """\
 xxx
 .x.
@@ -66,7 +78,7 @@ xxx
 )
 
 GRID_PULSAR = (
-"Pulsar-3", 32, 32, True,
+"Pulsar-3", 32, 32, True, "B3/S23",
 """\
 ..xxx...xxx..
 .............
@@ -85,7 +97,7 @@ x....x.x....x
 )
 
 GRID_LWSS = (
-"Spaceship LWSS", 16, 32, True,
+"Spaceship LWSS", 16, 32, True, "B3/S23",
 """\
 .xxxx
 x...x
@@ -95,7 +107,7 @@ x..x.
 )
 
 GRID_MWSS = (
-"Spaceship MWSS", 16, 32, True,
+"Spaceship MWSS", 16, 32, True, "B3/S23",
 """\
 ..x...
 x...x.
@@ -106,7 +118,7 @@ x....x
 )
 
 GRID_HWSS = (
-"Spaceship HWSS", 16, 32, True,
+"Spaceship HWSS", 16, 32, True, "B3/S23",
 """\
 .xxxxxx
 x.....x
@@ -117,7 +129,7 @@ x....x.
 )
 
 GRID_TOAD = (
-"Toad", 16, 16, True,
+"Toad", 16, 16, True, "B3/S23",
 """\
 .xxx
 xxx.
@@ -125,14 +137,14 @@ xxx.
 )
 
 GRID_BLINKER = (
-"Blinker", 16, 16, True,
+"Blinker", 16, 16, True, "B3/S23",
 """\
 xxx
 """
 )
 
 GRID_B_HEPTOMINO = (
-"B-heptomino", 80, 80, False,
+"B-heptomino", 80, 80, False, "B3/S23",
 """\
 x.xx
 xxx.
@@ -141,7 +153,7 @@ xxx.
 )
 
 GRID_I_HEPTOMINO = (
-"I-heptomino", 80, 80, False,
+"I-heptomino", 80, 80, False, "B3/S23",
 """\
 ..xx
 .xx.
@@ -151,7 +163,7 @@ xx..
 )
 
 GRID_GOSPER = (
-"Gosper's glider gun", 64, 64, False,
+"Gosper's glider gun", 64, 64, False, "B3/S23",
 """\
 ........................x...........
 ......................x.x...........
@@ -166,18 +178,18 @@ xx........x...x.xx....x.x...........
 )
 
 GRID_BLANK_SMALL = (
-"Blank grid, small", 16, 16, True,
-" "
+"Blank grid, small", 16, 16, True, "B3/S23",
+""
 )
 
 GRID_BLANK_MID = (
-"Blank grid, mid", 32, 32, True,
-" "
+"Blank grid, mid", 32, 32, True, "B3/S23",
+""
 )
 
 GRID_BLANK_LARGE = (
-"Blank grid, large", 64, 64, True,
-" "
+"Blank grid, large", 64, 64, True, "B3/S23",
+""
 )
 
 
