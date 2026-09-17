@@ -124,7 +124,7 @@ class CGOL_Game(Game):
         self._is_warp = is_warp
         self._size = size
         self._live_cells = 0
-        self._array : CellArray[bool] = CellArray[bool](size=self._size, dtype=bool)
+        self._grid : CellArray[bool] = CellArray[bool](size=self._size, dtype=bool)
 
 
     def load_pattern(self, pattern:str, *, name:str, rows:int=0, cols:int=0, is_warp:bool=True, rules:str="B3/S23"):
@@ -492,6 +492,37 @@ class CGOL_Game(Game):
         if rows>0 and cols>0:
             self._grid.resize(size=(rows, cols))
         self._live_cells = 0
+
+
+    def add_pattern_at(self, pattern:str, pos:tuple[int,int]):
+        """Add pattern to the grid at the given location
+
+        Args:
+            pattern: [str]  pattern to create
+            pos: [int,int]  position at which pattern will be created
+
+        Note:
+            upper-left (NW) corner of pattern will be created at the position
+        """
+        r, c = pos
+        array = CellArray(pattern)
+        nr, nc = array.size
+        my_rows, my_cols = self.size()
+
+        for i in range(nr):
+            for j in range(nc):
+                ir = r + i
+                jc = c + j
+                if not self._is_warp:
+                    # if not warped, skip anything beyond our boundary
+                    if not (0 <= ir < my_rows and 0 <= jc < my_cols):
+                        continue
+
+                old_cell = self._grid[ir,jc]
+                new_cell = array[i,j]
+                if new_cell != old_cell:
+                    self._live_cells += 1 if new_cell else -1
+                self._grid[ir,jc] = new_cell
 
 
     def resize(self, rows:int, cols:int, *, anchor:ResizeAnchor="nw"):

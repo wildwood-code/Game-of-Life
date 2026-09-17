@@ -257,6 +257,25 @@ class GameEngine:
         return (rows, cols, name)
 
 
+    def clear(self):
+        """Clear the game grid
+        """
+        self._game.clear()
+
+
+    def add_pattern_at(self, pattern:str, pos:tuple[int,int]):
+        """Add pattern to the game grid at the given location
+
+        Args:
+            pattern: [str]  pattern to create
+            pos: [int,int]  position at which pattern will be created
+
+        Note:
+            upper-left (NW) corner of pattern will be created at the position
+        """
+        self._game.add_pattern_at(pattern, pos)
+
+
     def save_file(self, parent:wx.Panel) -> bool:
         """Save a game to a file using the Save dialog
 

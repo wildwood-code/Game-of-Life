@@ -30,14 +30,13 @@
 #    2026-09-11  KSM  Implemented rules select/change; v1.3
 #    2026-09-13  KSM  Consolidated redundant rows, cols, name variables; v1.4
 #                     Added new games
+#    2026-09-17  KSM  Added grid context menu; v1.5
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
 # TODO: Feature request
-#  Right-click on grid to add structures: Glider SE, NE, NW, SW
-#    block, beehive, blinker, toad, beacon, tub, pentadecathlon
-#  Right-click or some other way to clear the grid
 #  Puffer train (\bigger grid?)  https://en.wikipedia.org/wiki/Puffer_train
+#  Option to show/hide gray grid lines
 # ******************************************************************************
 
 import os
@@ -62,10 +61,11 @@ class CGOL(frmMain):
 
     @classmethod
     def static_init(cls):
-        cls.VERSION = "1.4"
+        cls.VERSION = "1.5"
         cls.INITIAL_GAME_IDX = 0
         cls.BACKGROUND_COLOR = (240, 240, 240)  # backgnd (red, green, blue)
         cls.LIVE_CELL_COLOR  = (0, 0, 0)        # live cell (red, green, blue)
+        cls.HIGHLIGHT_COLOR  = (0, 255, 0)      # highlight cell (red, green, blue)
         cls.CELL_WH          = (12, 12)         # initial cell width, height pixels
         cls.TIMER_MIN_MS:float = 20.0
         cls.TIMER_MAX_MS:float = 200.0
@@ -103,7 +103,8 @@ class CGOL(frmMain):
         self.Layout()
 
         # --- Setup the game engine and grid ---
-        self.pnlGrid.configure(color=CGOL.LIVE_CELL_COLOR, cell_wh=CGOL.CELL_WH)
+        self.pnlGrid.configure(color=CGOL.LIVE_CELL_COLOR, cell_wh=CGOL.CELL_WH, highlight=CGOL.HIGHLIGHT_COLOR)
+        self.pnlGrid.set_message_handler(self.show_message)
         self.pnlGrid.load_preset(CGOL.INITIAL_GAME_IDX)
 
         # --- Game settings ---

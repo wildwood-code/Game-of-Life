@@ -17,12 +17,15 @@
 #    2026-09-05  KSM  Created
 #    2026-09-09  KSM  Changed rendering to buffered DC; reduced flickering
 #    2026-09-11  KSM  Implemented rules select/change
+#    2026-09-17  KSM  Added grid context menu
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
 
 import wx
 from cgol_game_engine import GameEngine
+from cgol_context_menu import GridContextMenu
+from typing import Callable
 
 
 class pnlGameGrid(wx.Panel):
@@ -49,30 +52,69 @@ class pnlGameGrid(wx.Panel):
         self.cols = 0
         self._engine = GameEngine()
         self._live_cell_color = (0, 0, 0)
+        self._highlight_cell_color = (0, 255, 0)
         self._is_paused : bool = True
         self._grid_data = self._engine.grid_data()
+        self.__show_message : Callable[[str],None]|None = None
+        self.__highlight_cell : tuple[int,int]|None = None
 
         self._buffer_bitmap = wx.Bitmap(1,1)
         self.w_cell = 0
         self.h_cell = 0
 
+        self._menu = GridContextMenu(self)
+
         self.SetMinSize(wx.Size(self.w_cell * self.cols, self.h_cell * self.rows))
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_SIZE, self.on_size_panel)
         self.Bind(wx.EVT_ERASE_BACKGROUND, self.on_erase_background)
+        self.Bind(wx.EVT_RIGHT_DOWN, self.on_right_click)
 
         self.SetDoubleBuffered(True)
+
+
+    def __set_highlight_cell(self, pos:tuple[int,int]|None=None):
+        """Set the coordinate of the highlighted cell or clear it
+
+        Args:
+            pos: [None]   clear the highlighted cell {default}
+                 [tuple]  (row,col) = highlighted cell coordinate
+        """
+        self.__highlight_cell = pos
+
+
+    def set_message_handler(self, fnmessage:Callable[[str],None]):
+        """Sets the message handler function from the parent
+
+        Args:
+            fnmessage: [Callable] function to display status message
+        """
+        self.__show_message = fnmessage
+
+
+    def show_message(self, message:str):
+        """Generate a transient message in the stauts bar "message" field
+
+        Args:
+            message: [str] Message to show. Defaults="" -> clears the field.
+            time_ms: [int] Time to display in msec. Default=0 -> use global
+        """
+        if self.__show_message:
+            self.__show_message(message)
 
 
     def configure(self, *,
                   color:tuple[int,int,int]|None=None,
                   cell_wh:tuple[int,int]|None=None,
-                  size:tuple[int,int]|None=None):
+                  size:tuple[int,int]|None=None,
+                  highlight:tuple[int,int,int]|None=None):
         """Configure grid-specific settings that cannot be done during construction
 
         Args:
             color: Live-cell color (R,G,B). Default=None -> do not set color
             cell_wh: Cell width and height (w,h). Default=None -> do not set w, h
+            size:  grid size (rows, cols). Default=None -> do not set size
+            highlight: Color (R,G,B). Default=None -> do not set highlight
         """
         if color is not None:
             self._live_cell_color = color
@@ -81,6 +123,8 @@ class pnlGameGrid(wx.Panel):
         if size is not None:
             self.rows, self.cols = size
             self.SetMinSize(wx.Size(self.w_cell * self.cols, self.h_cell * self.rows))
+        if highlight is not None:
+            self._highlight_cell_color = highlight
 
 
     def advance_generation(self) -> int:
@@ -312,10 +356,18 @@ class pnlGameGrid(wx.Panel):
         # --- Draw every live cell ---
         for r in range(self.rows):
             for c in range(self.cols):
-                if self._grid_data[r,c]: #self._engine[r, c]:
+                if self._grid_data[r,c]:
                     x = c * self.w_cell
                     y = r * self.h_cell
                     dc.DrawRectangle(x, y, self.w_cell, self.h_cell)
+
+        # --- Draw highlight, if any ---
+        if self.__highlight_cell is not None:
+            dc.SetBrush(wx.Brush(wx.Colour(*self._highlight_cell_color)))
+            r, c = self.__highlight_cell
+            x = c * self.w_cell
+            y = r * self.h_cell
+            dc.DrawRectangle(x, y, self.w_cell, self.h_cell)
 
 
     def on_paint(self, event:wx.PaintEvent):
@@ -361,6 +413,41 @@ class pnlGameGrid(wx.Panel):
         # --- Allow the event to propagate further if needed ---
         event.Skip()
 
+
+    def on_right_click(self, event:wx.MouseEvent):
+        if self._is_paused:
+            pos = event.GetPosition()
+            click_col = pos.x // self.w_cell
+            click_row = pos.y // self.h_cell
+
+            if not ( 0 <= click_row < self.rows  and 0 <= click_col < self.cols ):
+                return
+
+            self.__set_highlight_cell((click_row, click_col))
+            self.__render_grid_to_buffer()
+            self.Refresh()
+
+            result = self._menu.show_context_menu(pos)
+
+            if result is not None:
+                if isinstance(result, int):
+                    if result == 0:
+                        self._engine.clear()
+                        self.show_message("Cleared grid...")
+                elif isinstance(result, tuple):
+                    # generate an object with head at the grid location
+                    label, pattern, head = result
+                    head_row, head_col = head
+                    pos_at = (click_row - head_row, click_col - head_col)
+                    self._engine.add_pattern_at(pattern, pos_at)
+                    self.show_message(f"Added {label.lower()}...")
+
+            self.__set_highlight_cell(None)
+            self._sync_from_engine()
+            self.__render_grid_to_buffer()
+            self.Refresh()
+        else:
+            self.show_message("Pause to access menu...")
 
     def on_size_panel(self, event:wx.SizeEvent):
         """EVT_SIZE handler
