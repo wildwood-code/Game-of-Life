@@ -31,12 +31,13 @@
 #    2026-09-13  KSM  Consolidated redundant rows, cols, name variables; v1.4
 #                     Added new games
 #    2026-09-17  KSM  Added grid context menu; v1.5
+#    2026-09-18  KSM  Added grid and grid on/off; fixed live cell count; v1.6
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
 # TODO: Feature request
 #  Puffer train (\bigger grid?)  https://en.wikipedia.org/wiki/Puffer_train
-#  Option to show/hide gray grid lines
+#  Minor grid drawing issue: some blank space or cut grid on the bottom row
 # ******************************************************************************
 
 import os
@@ -61,11 +62,12 @@ class CGOL(frmMain):
 
     @classmethod
     def static_init(cls):
-        cls.VERSION = "1.5"
+        cls.VERSION = "1.6"
         cls.INITIAL_GAME_IDX = 0
         cls.BACKGROUND_COLOR = (240, 240, 240)  # backgnd (red, green, blue)
         cls.LIVE_CELL_COLOR  = (0, 0, 0)        # live cell (red, green, blue)
         cls.HIGHLIGHT_COLOR  = (0, 255, 0)      # highlight cell (red, green, blue)
+        cls.GRID_COLOR       = (220, 220, 220)  # grid color (red, green, blue)
         cls.CELL_WH          = (12, 12)         # initial cell width, height pixels
         cls.TIMER_MIN_MS:float = 20.0
         cls.TIMER_MAX_MS:float = 200.0
@@ -110,6 +112,7 @@ class CGOL(frmMain):
         # --- Game settings ---
         self.pnlGrid.is_paused = True
         self.pnlGrid.is_warp = True
+        self.pnlGrid.is_grid_visible = True
 
         # --- Set the application icons ---
         app_icons = wx.IconBundle()
@@ -126,6 +129,7 @@ class CGOL(frmMain):
         self.IMAGE_PAUSE        = images.imgPause
         self.IMAGE_STEP         = images.imgStep
         self.IMAGE_WARP         = images.imgWarp
+        self.IMAGE_GRID         = images.imgGrid
         self.IMAGE_FASTER       = images.imgFaster
         self.IMAGE_SLOWER       = images.imgSlower
         self.IMAGE_TAKE_SNAP    = images.imgTakeSnap
@@ -136,6 +140,7 @@ class CGOL(frmMain):
         self.TOOL_ID_PLAY    = self.toolPlay.GetId()
         self.TOOL_ID_STEP    = self.toolStep.GetId()
         self.TOOL_ID_WARP    = self.toolWarp.GetId()
+        self.TOOL_ID_GRID    = self.toolGrid.GetId()
         self.TOOL_ID_SLOW    = self.toolSlower.GetId()
         self.TOOL_ID_FAST    = self.toolFaster.GetId()
         self.TOOL_ID_TAKE    = self.toolTakeSnap.GetId()
@@ -146,6 +151,7 @@ class CGOL(frmMain):
         tbar = self.tbarMain
         CGOL.set_tool_image(tbar, self.TOOL_ID_STEP,    self.IMAGE_STEP)
         CGOL.set_tool_image(tbar, self.TOOL_ID_WARP,    self.IMAGE_WARP)
+        CGOL.set_tool_image(tbar, self.TOOL_ID_GRID,    self.IMAGE_GRID)
         CGOL.set_tool_image(tbar, self.TOOL_ID_SLOW,    self.IMAGE_SLOWER)
         CGOL.set_tool_image(tbar, self.TOOL_ID_FAST,    self.IMAGE_FASTER)
         CGOL.set_tool_image(tbar, self.TOOL_ID_TAKE,    self.IMAGE_TAKE_SNAP)
@@ -167,6 +173,7 @@ class CGOL(frmMain):
 
         # --- Set warp status ---
         self.tbarMain.ToggleTool(self.TOOL_ID_WARP, self.pnlGrid.is_warp)
+        self.tbarMain.ToggleTool(self.TOOL_ID_GRID, self.pnlGrid.is_grid_visible)
 
         # --- Setup game speed slider ---
         self.sldSpeed.SetRange(0, CGOL.SLIDER_MAX)
@@ -180,6 +187,10 @@ class CGOL(frmMain):
         self.timer_message : wx.CallLater|None = None
         self.show_message("")
 
+        # -- Bind the tool buttons ---
+        self.Bind(wx.EVT_TOOL, self.on_click_warp, id=self.TOOL_ID_WARP)
+        self.Bind(wx.EVT_TOOL, self.on_click_grid, id=self.TOOL_ID_GRID)
+
         # --- Setup key bindings and accelerator table ---
         self.ID_TOGGLE_PLAY = wx.NewIdRef()
         self.ID_ADVANCE_GEN = wx.NewIdRef()
@@ -188,6 +199,8 @@ class CGOL(frmMain):
         self.ID_TIMER_FASTER = wx.NewIdRef()
         self.ID_TIMER_SLOWER = wx.NewIdRef()
         self.ID_ABOUT = wx.NewIdRef()
+        self.ID_TOGGLE_GRID = wx.NewIdRef()
+        self.ID_TOGGLE_WARP = wx.NewIdRef()
         self.Bind(wx.EVT_MENU, self.on_click_play, id=self.ID_TOGGLE_PLAY)
         self.Bind(wx.EVT_MENU, self.on_click_step, id=self.ID_ADVANCE_GEN)
         self.Bind(wx.EVT_MENU, self.on_take_snap, id=self.ID_TAKE_SNAP)
@@ -195,6 +208,8 @@ class CGOL(frmMain):
         self.Bind(wx.EVT_MENU, self.on_click_fast, id=self.ID_TIMER_FASTER)
         self.Bind(wx.EVT_MENU, self.on_click_slow, id=self.ID_TIMER_SLOWER)
         self.Bind(wx.EVT_MENU, self.on_click_about, id=self.ID_ABOUT)
+        self.Bind(wx.EVT_MENU, self.on_toggle_warp, id=self.ID_TOGGLE_WARP)
+        self.Bind(wx.EVT_MENU, self.on_toggle_grid, id=self.ID_TOGGLE_GRID)
         accel_entries = [
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_SPACE, self.ID_TOGGLE_PLAY),
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('a'), self.ID_ADVANCE_GEN),
@@ -205,7 +220,9 @@ class CGOL(frmMain):
             wx.AcceleratorEntry(wx.ACCEL_SHIFT,  ord('.'), self.ID_TIMER_FASTER),
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord(','), self.ID_TIMER_SLOWER),
             wx.AcceleratorEntry(wx.ACCEL_SHIFT,  ord(','), self.ID_TIMER_SLOWER),
-            wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F1, self.ID_ABOUT)
+            wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F1, self.ID_ABOUT),
+            wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('g'), self.ID_TOGGLE_GRID),
+            wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('w'), self.ID_TOGGLE_WARP)
         ]
         accel_table = wx.AcceleratorTable(accel_entries)
         self.SetAcceleratorTable(accel_table)
@@ -295,6 +312,7 @@ class CGOL(frmMain):
             self.toolStep.Enable(False)
 
         self.tbarMain.ToggleTool(self.TOOL_ID_WARP, self.pnlGrid.is_warp)
+        self.tbarMain.ToggleTool(self.TOOL_ID_GRID, self.pnlGrid.is_grid_visible)
 
         self.tbarMain.Realize()
 
@@ -622,6 +640,15 @@ class CGOL(frmMain):
         event.Skip()
 
 
+    def __after_click_warp(self):
+        """Helper function for on_click_warp() and on_toggle_warp()
+        """
+        if self.pnlGrid.is_warp:
+            self.show_message("Let's do the time warp again...")
+        else:
+            self.show_message("Let them disintegrate...")
+
+
     def on_click_warp(self, event:wx.CommandEvent):
         """EVT_TOOL for the "warp" check tool
 
@@ -629,11 +656,57 @@ class CGOL(frmMain):
             event: [wx.CommandEvent]
         """
         self.pnlGrid.is_warp = self.tbarMain.GetToolState(self.TOOL_ID_WARP)
-        if self.pnlGrid.is_warp:
-            self.show_message("Let's do the time warp again...")
-        else:
-            self.show_message("Let them disintegrate...")
+        self.__after_click_warp()
         event.Skip()
+
+
+    def on_toggle_warp(self, event:wx.MenuEvent):
+        """EVT_MENU for the "warp" check tool toggle via accellerator 'w'
+
+        Args:
+            event: [wx.MenuEvent]
+        """
+        is_warp = not self.pnlGrid.is_warp
+        self.pnlGrid.is_warp = is_warp
+        self.tbarMain.ToggleTool(self.TOOL_ID_WARP, is_warp)
+        self.__after_click_warp()
+
+
+    def __after_click_grid(self):
+        """Helper function for on_click_grid() and on_toggle_grid()
+        """
+        if self.pnlGrid.is_grid_visible:
+            self.show_message("Show the grid...")
+        else:
+            self.show_message("Hide the grid...")
+        if self.pnlGrid.is_paused:
+            # only need to do this if it is not currently running
+            # if it is running, it will redraw on the next step
+            self.pnlGrid.redraw_grid()
+            self.Refresh()
+
+
+    def on_click_grid(self, event:wx.CommandEvent):
+        """EVT_TOOL for the "grid" check tool
+
+        Args:
+            event: [wx.CommandEvent]
+        """
+        self.pnlGrid.is_grid_visible = self.tbarMain.GetToolState(self.TOOL_ID_GRID)
+        self.__after_click_grid()
+        event.Skip()
+
+
+    def on_toggle_grid(self, event:wx.MenuEvent):
+        """EVT_MENU for the grid check tool toggle via accellerator 'g'
+
+        Args:
+            event: [wx.MenuEvent]
+        """
+        is_grid_visible = not self.pnlGrid.is_grid_visible
+        self.pnlGrid.is_grid_visible = is_grid_visible
+        self.tbarMain.ToggleTool(self.TOOL_ID_GRID, is_grid_visible)
+        self.__after_click_grid()
 
 
     def on_take_snap(self, event:wx.CommandEvent):
@@ -709,6 +782,8 @@ class CGOL(frmMain):
             "• s - Advance one step\n"
             "• t - Take snapshot\n"
             "• r - Restore snapshot\n"
+            "• g - Toggle grid on/off\n"
+            "• w - Toggle edge warp\n"
             "• < - Shorter interval\n"
             "• > - Longer interval"
         )

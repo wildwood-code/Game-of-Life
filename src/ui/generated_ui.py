@@ -18,7 +18,7 @@ import wx.xrc
 class frmMain ( wx.Frame ):
 
     def __init__( self, parent ):
-        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Conway's Game of Life", pos = wx.DefaultPosition, size = wx.Size( 860,549 ), style = wx.CAPTION|wx.CLOSE_BOX|wx.RESIZE_BORDER|wx.SYSTEM_MENU )
+        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Conway's Game of Life", pos = wx.DefaultPosition, size = wx.Size( 936,549 ), style = wx.CAPTION|wx.CLOSE_BOX|wx.RESIZE_BORDER|wx.SYSTEM_MENU )
 
         self.SetSizeHints( wx.Size( 800,480 ), wx.DefaultSize )
 
@@ -48,6 +48,8 @@ class frmMain ( wx.Frame ):
         self.tbarMain.AddSeparator()
 
         self.toolWarp = self.tbarMain.AddTool( wx.ID_ANY, u"Warp", wx.ArtProvider.GetBitmap( wx.ART_TIP, wx.ART_TOOLBAR ), wx.NullBitmap, wx.ITEM_CHECK, u"Warp at edge", wx.EmptyString, None )
+
+        self.toolGrid = self.tbarMain.AddTool( wx.ID_ANY, u"Grid", wx.ArtProvider.GetBitmap( wx.ART_TIP, wx.ART_TOOLBAR ), wx.NullBitmap, wx.ITEM_CHECK, wx.EmptyString, wx.EmptyString, None )
 
         self.tbarMain.AddSeparator()
 

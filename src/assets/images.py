@@ -13,8 +13,9 @@
 #    Affinity Designer v2.6.5. The .afdesign file is exported to PNG and then
 #    converted to PyEmbeddedImage() objects using img2py
 #
-#  Created    : 2026-09-05
-#  Modified   : 2026-09-05
+#  Change log:
+#    2026-09-05  KSM  Created
+#    2026-09.17  KSM  Added imgGrid
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -814,6 +815,53 @@ imgIcon256x256 = PyEmbeddedImage(
     b'fPhQh4eHU9nm4bjrM/powt9nq2r8n+8GmLbfqurvb/1x0ivA56q6+F9vB2jloi6f4W+amfAF'
     b'X+ryV8KgnCQM98lFVf1ZVQe3fWjSK8A/ZmpyLIDu+FwT/vcHAAAAAAAAHqSvxUtqzqzfoJwA'
     b'AAAASUVORK5CYII=')
+
+#----------------------------------------------------------------------
+imgGrid = PyEmbeddedImage(
+    b'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAFtmlUWHRYTUw6Y29tLmFkb2Jl'
+    b'LnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRj'
+    b'emtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0i'
+    b'WE1QIENvcmUgNS41LjAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9y'
+    b'Zy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjph'
+    b'Ym91dD0iIgogICAgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEv'
+    b'IgogICAgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIgogICAgeG1s'
+    b'bnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIgogICAg'
+    b'eG1sbnM6ZXhpZj0iaHR0cDovL25zLmFkb2JlLmNvbS9leGlmLzEuMC8iCiAgICB4bWxuczp0'
+    b'aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyIKICAgIHhtbG5zOnhtcE1NPSJo'
+    b'dHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIgogICAgeG1sbnM6c3RFdnQ9Imh0dHA6'
+    b'Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIKICAgeG1wOkNy'
+    b'ZWF0ZURhdGU9IjIwMjYtMDktMTdUMTM6MzQ6NDAtMDUwMCIKICAgeG1wOk1vZGlmeURhdGU9'
+    b'IjIwMjYtMDktMTdUMTM6MzY6NTgtMDU6MDAiCiAgIHhtcDpNZXRhZGF0YURhdGU9IjIwMjYt'
+    b'MDktMTdUMTM6MzY6NTgtMDU6MDAiCiAgIHBob3Rvc2hvcDpEYXRlQ3JlYXRlZD0iMjAyNi0w'
+    b'OS0xN1QxMzozNDo0MC0wNTAwIgogICBwaG90b3Nob3A6Q29sb3JNb2RlPSIzIgogICBwaG90'
+    b'b3Nob3A6SUNDUHJvZmlsZT0ic1JHQiBJRUM2MTk2Ni0yLjEiCiAgIGV4aWY6UGl4ZWxYRGlt'
+    b'ZW5zaW9uPSI0OCIKICAgZXhpZjpQaXhlbFlEaW1lbnNpb249IjQ4IgogICBleGlmOkNvbG9y'
+    b'U3BhY2U9IjEiCiAgIHRpZmY6SW1hZ2VXaWR0aD0iNDgiCiAgIHRpZmY6SW1hZ2VMZW5ndGg9'
+    b'IjQ4IgogICB0aWZmOlJlc29sdXRpb25Vbml0PSIyIgogICB0aWZmOlhSZXNvbHV0aW9uPSIz'
+    b'MDAvMSIKICAgdGlmZjpZUmVzb2x1dGlvbj0iMzAwLzEiPgogICA8ZGM6dGl0bGU+CiAgICA8'
+    b'cmRmOkFsdD4KICAgICA8cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPkdyaWQgaWNvbjwv'
+    b'cmRmOmxpPgogICAgPC9yZGY6QWx0PgogICA8L2RjOnRpdGxlPgogICA8eG1wTU06SGlzdG9y'
+    b'eT4KICAgIDxyZGY6U2VxPgogICAgIDxyZGY6bGkKICAgICAgc3RFdnQ6YWN0aW9uPSJwcm9k'
+    b'dWNlZCIKICAgICAgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWZmaW5pdHkgRGVzaWduZXIgMiAy'
+    b'LjYuNSIKICAgICAgc3RFdnQ6d2hlbj0iMjAyNi0wOS0xN1QxMzozNjo1OC0wNTowMCIvPgog'
+    b'ICAgPC9yZGY6U2VxPgogICA8L3htcE1NOkhpc3Rvcnk+CiAgPC9yZGY6RGVzY3JpcHRpb24+'
+    b'CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+7qAc6AAAAYJp'
+    b'Q0NQc1JHQiBJRUM2MTk2Ni0yLjEAACiRdZG7SwNBEIe/JIqviM9CxOKUaKXiA0Qbi4gvUIsk'
+    b'glGb5MxDSOJxlyDBVrANKIg2vgr9C7QVrAVBUQSxFktFGw3nXBKIiJlldr797c6wOwt2X0yN'
+    b'G2V9EE8kdc+kW1nwLyoVr1TRQCPttAZUQ5v1TvgoaZ/32Kx422PVKn3uX6tZCRkq2CqFR1VN'
+    b'TwpPCc+sJzWLd4Sb1WhgRfhMuFuXCwrfWXowzy8WR/L8bbHu84yBvV5Yifzi4C9Wo3pcWF6O'
+    b'Kx5LqYX7WC9xhhLzXokd4m0YeJjEjcI044wxRD8jMg/RwwC9sqJEfl8uf441yVVl1kijs0qE'
+    b'KEm6RU1J9ZDEsOghGTHSVv//9tUIDw7kqzvdUP5smu+dULEN2Yxpfh2ZZvYYHE9wmSjmrx3C'
+    b'8IfomaLmOoC6TTi/KmrBXbjYgpZHLaAHcpJD3B4Ow9sp1Pqh6Qaql/I9K+xz8gC+Dfmqa9jb'
+    b'hy45X7f8A3+2Z/Gsa+OtAAAACXBIWXMAAC4jAAAuIwF4pT92AAABnUlEQVRoge2aMW7CMBSG'
+    b'/9iJxQIDbEioI1WXXICNjSswcgo4AAv3QGJk5QwsWaoyIKViBISYaIztdAHKULV66fAa5G+K'
+    b'Iv/v+RssPVkGSk5w990CUClQQwKwBfsXzX4A2ABfAi0A70opQ61kjAmFEFYIkVNy1trAOSej'
+    b'KCL31FqHAJ4AbMLLv4pSyozH44habDKZ6H6/r5rNJimXJAmWy6UeDAaK2nM0Gp211hUAENTw'
+    b'f8MLcOMFuPEC3HgBbrwAN6UXuE6jzwBeG41G8NPi7zgcDnm1Wg3CMPx98R1ZliHLsrxWq5F7'
+    b'7vf7HMALgLdrVyuldL1eT1KLzedz2+l0wnq9TsqlaYr1em273S7NHMB0OnXWWgsAt7CU0sVx'
+    b'TBZYLBau3W6DOk4DwG63c3Eck3Oz2cxd9l/+M+AFuPEC3HgBbrwAN16Am9ss5JwLkiQhFzid'
+    b'TmK1WmG73ZJyaZrieDyKIj2dc7cJ9nHGaaWUGQ6HRS53z3+43D0XvNw1WmsLPMAZ8ALceAFu'
+    b'vAA3XoAbL8BN6QVK/9Sg9I89Ss8n/aSzUL/r1cMAAAAASUVORK5CYII=')
 
 
 # ******************************************************************************

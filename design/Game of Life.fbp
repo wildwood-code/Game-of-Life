@@ -50,7 +50,7 @@
       <property name="minimum_size">800,480</property>
       <property name="name">frmMain</property>
       <property name="pos"></property>
-      <property name="size">860,549</property>
+      <property name="size">936,549</property>
       <property name="style">wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER|wxSYSTEM_MENU</property>
       <property name="subclass">; ; forward_declare</property>
       <property name="title">Conway&apos;s Game of Life</property>
@@ -286,6 +286,17 @@
           <property name="statusbar"></property>
           <property name="tooltip">Warp at edge</property>
           <event name="OnToolClicked">on_click_warp</event>
+        </object>
+        <object class="tool" expanded="true">
+          <property name="bitmap">Load From Art Provider; wxART_TIP; wxART_TOOLBAR</property>
+          <property name="context_menu">0</property>
+          <property name="id">wxID_ANY</property>
+          <property name="kind">wxITEM_CHECK</property>
+          <property name="label">Grid</property>
+          <property name="name">toolGrid</property>
+          <property name="permission">protected</property>
+          <property name="statusbar"></property>
+          <property name="tooltip"></property>
         </object>
         <object class="toolSeparator" expanded="false">
           <property name="permission">protected</property>

@@ -53,7 +53,9 @@ class pnlGameGrid(wx.Panel):
         self._engine = GameEngine()
         self._live_cell_color = (0, 0, 0)
         self._highlight_cell_color = (0, 255, 0)
+        self._grid_color = (128, 128, 128)
         self._is_paused : bool = True
+        self._is_grid_visible : bool = True
         self._grid_data = self._engine.grid_data()
         self.__show_message : Callable[[str],None]|None = None
         self.__highlight_cell : tuple[int,int]|None = None
@@ -107,7 +109,8 @@ class pnlGameGrid(wx.Panel):
                   color:tuple[int,int,int]|None=None,
                   cell_wh:tuple[int,int]|None=None,
                   size:tuple[int,int]|None=None,
-                  highlight:tuple[int,int,int]|None=None):
+                  highlight:tuple[int,int,int]|None=None,
+                  grid:tuple[int,int,int]|None=None):
         """Configure grid-specific settings that cannot be done during construction
 
         Args:
@@ -125,6 +128,8 @@ class pnlGameGrid(wx.Panel):
             self.SetMinSize(wx.Size(self.w_cell * self.cols, self.h_cell * self.rows))
         if highlight is not None:
             self._highlight_cell_color = highlight
+        if grid is not None:
+            self._grid_color = grid
 
 
     def advance_generation(self) -> int:
@@ -137,6 +142,12 @@ class pnlGameGrid(wx.Panel):
         self._sync_from_engine()
         self.__render_grid_to_buffer()
         return live_cells
+
+
+    def redraw_grid(self):
+        """Force a redraw of the grid
+        """
+        self.__render_grid_to_buffer()
 
 
     def load_preset(self, game:int) -> tuple[int, int, str]:
@@ -273,6 +284,26 @@ class pnlGameGrid(wx.Panel):
 
 
     @property
+    def is_grid_visible(self) -> bool:
+        """Property: is the grid visible
+
+        Returns:
+            True if grid visible; False if grid not visible
+        """
+        return self._is_grid_visible
+
+
+    @is_grid_visible.setter
+    def is_grid_visible(self, visible:bool):
+        """Set the grid visibility
+
+        Args:
+            visible: True -> grid visible; False -> grid not visible
+        """
+        self._is_grid_visible = visible
+
+
+    @property
     def is_warp(self) -> bool:
         """Property: warp state for the engine
 
@@ -369,6 +400,24 @@ class pnlGameGrid(wx.Panel):
             y = r * self.h_cell
             dc.DrawRectangle(x, y, self.w_cell, self.h_cell)
 
+        # --- Draw the grid, if visible ---
+        if self._is_grid_visible:
+            info = wx.PenInfo(colour=wx.Colour(*self._grid_color), width=1, style=wx.PENSTYLE_SOLID)
+            dc.SetPen(wx.Pen(info))
+            nr, nc = self.size()
+            x0, x2 = 0, nc*self.w_cell
+            y0, y2 = 0, nr*self.h_cell
+            for i in range(nr+1):
+                y = i * self.h_cell
+                p0 = wx.Point(x0, y)
+                p2 = wx.Point(x2, y)
+                dc.DrawLine(p0, p2)
+            for j in range(nc+1):
+                x = j * self.w_cell
+                p0 = wx.Point(x, y0)
+                p2 = wx.Point(x, y2)
+                dc.DrawLine(p0, p2)
+
 
     def on_paint(self, event:wx.PaintEvent):
         """EVT_PAINT hanndler for the game grid panel; draws the panel
@@ -415,6 +464,11 @@ class pnlGameGrid(wx.Panel):
 
 
     def on_right_click(self, event:wx.MouseEvent):
+        """EVT_RIGHT_DOWN handler for the panel grid
+
+        Args:
+            event: [wx.MouseEvent]
+        """
         if self._is_paused:
             pos = event.GetPosition()
             click_col = pos.x // self.w_cell
@@ -448,6 +502,7 @@ class pnlGameGrid(wx.Panel):
             self.Refresh()
         else:
             self.show_message("Pause to access menu...")
+
 
     def on_size_panel(self, event:wx.SizeEvent):
         """EVT_SIZE handler
