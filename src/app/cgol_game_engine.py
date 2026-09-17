@@ -16,6 +16,7 @@
 #    2026-09-05  KSM  Created
 #    2026-09-09  KSM  Changed class Game to newer CGOL_Game
 #    2026-09-11  KSM  Implemented rules select/change
+#    2026-09-13  KSM  Consolidated redundant rows, cols, name variables
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -35,8 +36,6 @@ class GameEngine:
         """GameEngine constructor
         """
         self._game = CGOL_Game()
-        self._rows, self._cols = self._game.size()
-        self._name = self._game.name
 
 
     @property
@@ -46,7 +45,7 @@ class GameEngine:
         Returns:
             Name of the game
         """
-        return self._name
+        return self._game.name
 
 
     @property
@@ -89,7 +88,6 @@ class GameEngine:
         games = self._game.games_list
         all_rules = { g[4] for g in games }
         return sorted(list(all_rules))
-
 
 
     @property
@@ -141,7 +139,7 @@ class GameEngine:
         Returns:
             Size as tuple (rows, cols)
         """
-        return (self._rows, self._cols)
+        return self._game.size()
 
 
     @property
@@ -197,6 +195,8 @@ class GameEngine:
         """
         wildcard = "CGOL files (*.cgol)|*.cgol|All files (*.*)|*.*"
 
+        result = False
+
         with wx.FileDialog(
             parent=parent,
             message="Open file...",
@@ -206,17 +206,11 @@ class GameEngine:
             style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
         ) as fileDialog:
 
-            if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return False  # User changed their mind and closed the dialog
+            if fileDialog.ShowModal() == wx.ID_OK:
+                filename = fileDialog.GetPath()
+                result = self._game.load_file(filename)
 
-            filename = fileDialog.GetPath()
-
-            if self._game.load_file(filename):
-                self._name = self._game.name
-                self._rows, self._cols = self._game.size()
-                return True
-
-        return False
+        return result
 
 
     def load_preset(self, preset:int) -> tuple[int, int, str]:
@@ -229,9 +223,9 @@ class GameEngine:
             [tuple] (rows, cols, name)
         """
         self._game.load_preset(preset)
-        self._name = self._game.name
-        self._rows, self._cols = self._game.size()
-        return (self._rows, self._cols, self._name)
+        name = self._game.name
+        rows, cols = self._game.size()
+        return (rows, cols, name)
 
 
     def resize_game(self, size:tuple[int,int]):
@@ -243,7 +237,6 @@ class GameEngine:
         """
         rows, cols = size
         self._game.resize(rows, cols, anchor="x")
-        self._rows, self._cols = self._game.size()
 
 
     def new_game(self, *, size:tuple[int,int]=(0,0), name:str="") -> tuple[int, int, str]:
@@ -259,9 +252,9 @@ class GameEngine:
         """
         rows, cols = size
         self._game.clear(rows=rows, cols=cols)
-        self._name = name
-        self._rows, self._cols = self._game.size()
-        return (self._rows, self._cols, self._name)
+        self._game.name = name
+        rows, cols = self._game.size()
+        return (rows, cols, name)
 
 
     def save_file(self, parent:wx.Panel) -> bool:
@@ -274,7 +267,7 @@ class GameEngine:
             True if a file was saved; False otherwise
         """
         wildcard = "CGOL files (*.cgol)|*.cgol|All files (*.*)|*.*"
-
+        result = False
         with wx.FileDialog(
             parent=parent,
             message="Save file as...",
@@ -284,15 +277,11 @@ class GameEngine:
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
         ) as fileDialog:
 
-            if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return  False  # User changed their mind and closed the dialog
+            if fileDialog.ShowModal() == wx.ID_OK:
+                filename = fileDialog.GetPath()
+                result = self._game.save_file(filename)
 
-            filename = fileDialog.GetPath()
-            if self._game.save_file(filename):
-                self._name = self._game.name
-                return True
-            else:
-                return False
+        return result
 
 
 # ******************************************************************************

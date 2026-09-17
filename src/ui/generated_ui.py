@@ -18,7 +18,7 @@ import wx.xrc
 class frmMain ( wx.Frame ):
 
     def __init__( self, parent ):
-        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Conway's Game of Life", pos = wx.DefaultPosition, size = wx.Size( 800,480 ), style = wx.CAPTION|wx.CLOSE_BOX|wx.RESIZE_BORDER|wx.SYSTEM_MENU )
+        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"Conway's Game of Life", pos = wx.DefaultPosition, size = wx.Size( 860,549 ), style = wx.CAPTION|wx.CLOSE_BOX|wx.RESIZE_BORDER|wx.SYSTEM_MENU )
 
         self.SetSizeHints( wx.Size( 800,480 ), wx.DefaultSize )
 

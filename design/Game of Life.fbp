@@ -50,7 +50,7 @@
       <property name="minimum_size">800,480</property>
       <property name="name">frmMain</property>
       <property name="pos"></property>
-      <property name="size">800,480</property>
+      <property name="size">860,549</property>
       <property name="style">wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER|wxSYSTEM_MENU</property>
       <property name="subclass">; ; forward_declare</property>
       <property name="title">Conway&apos;s Game of Life</property>

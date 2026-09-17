@@ -28,8 +28,16 @@
 #    2026-09-05  KSM  Created
 #    2026-09-09  KSM  Updated version to 1.1 and later to 1.2
 #    2026-09-11  KSM  Implemented rules select/change; v1.3
+#    2026-09-13  KSM  Consolidated redundant rows, cols, name variables; v1.4
+#                     Added new games
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
+# ******************************************************************************
+# TODO: Feature request
+#  Right-click on grid to add structures: Glider SE, NE, NW, SW
+#    block, beehive, blinker, toad, beacon, tub, pentadecathlon
+#  Right-click or some other way to clear the grid
+#  Puffer train (\bigger grid?)  https://en.wikipedia.org/wiki/Puffer_train
 # ******************************************************************************
 
 import os
@@ -54,7 +62,7 @@ class CGOL(frmMain):
 
     @classmethod
     def static_init(cls):
-        cls.VERSION = "1.3"
+        cls.VERSION = "1.4"
         cls.INITIAL_GAME_IDX = 0
         cls.BACKGROUND_COLOR = (240, 240, 240)  # backgnd (red, green, blue)
         cls.LIVE_CELL_COLOR  = (0, 0, 0)        # live cell (red, green, blue)
@@ -90,10 +98,6 @@ class CGOL(frmMain):
         # --- catch the wxPython lifecycle trap in on_size() ---
         self.is_initialized = False
 
-        # --- Game settings ---
-        self.is_paused = True
-        self.is_warp = True
-
         # --- Begin form initialization ---
         self.tbarMain.Realize()
         self.Layout()
@@ -101,8 +105,10 @@ class CGOL(frmMain):
         # --- Setup the game engine and grid ---
         self.pnlGrid.configure(color=CGOL.LIVE_CELL_COLOR, cell_wh=CGOL.CELL_WH)
         self.pnlGrid.load_preset(CGOL.INITIAL_GAME_IDX)
-        self.live_cells = self.pnlGrid.live_cells
-        self.rows, self.cols = self.pnlGrid.size()
+
+        # --- Game settings ---
+        self.pnlGrid.is_paused = True
+        self.pnlGrid.is_warp = True
 
         # --- Set the application icons ---
         app_icons = wx.IconBundle()
@@ -153,14 +159,13 @@ class CGOL(frmMain):
 
         # --- Configure rule selector combo box ---
         rules_list = self.pnlGrid.games_rules_list
-        self.rules = self.pnlGrid.rules
         self.extra_rules_list = []
-        idx_rule = rules_list.index(self.rules)
+        idx_rule = rules_list.index(self.pnlGrid.rules)
         self.cmbRules.Set(rules_list + self.extra_rules_list)
         self.cmbRules.SetSelection(idx_rule)
 
         # --- Set warp status ---
-        self.tbarMain.ToggleTool(self.TOOL_ID_WARP, self.is_warp)
+        self.tbarMain.ToggleTool(self.TOOL_ID_WARP, self.pnlGrid.is_warp)
 
         # --- Setup game speed slider ---
         self.sldSpeed.SetRange(0, CGOL.SLIDER_MAX)
@@ -281,7 +286,7 @@ class CGOL(frmMain):
     def update_toolbar(self):
         """Set images for run/pause and enabled state of step buttons
         """
-        if self.is_paused:
+        if self.pnlGrid.is_paused:
             CGOL.set_tool_image(self.tbarMain, self.TOOL_ID_PLAY, self.IMAGE_PLAY)
             self.toolStep.Enable(True)
         else:
@@ -297,19 +302,21 @@ class CGOL(frmMain):
         """Update the text on the status bar
         """
         # Paused/running field
-        if self.is_paused:
+        if self.pnlGrid.is_paused:
             self.stabStatusBar.SetStatusText("Paused", CGOL.STATUS.IDX.FIELD_STATE)
         else:
             self.stabStatusBar.SetStatusText("Running", CGOL.STATUS.IDX.FIELD_STATE)
 
         # Live cell count field
-        self.stabStatusBar.SetStatusText(f"Live cells: {self.live_cells}", CGOL.STATUS.IDX.FIELD_LIVE)
+        live_cells = self.pnlGrid.live_cells
+        self.stabStatusBar.SetStatusText(f"Live cells: {live_cells}", CGOL.STATUS.IDX.FIELD_LIVE)
 
         # Grid size field (clickable)
-        self.stabStatusBar.SetStatusText(f"{self.rows} x {self.cols}", CGOL.STATUS.IDX.FIELD_GRID)
+        rows, cols = self.pnlGrid.size()
+        self.stabStatusBar.SetStatusText(f"{rows} x {cols}", CGOL.STATUS.IDX.FIELD_GRID)
 
         # Rules field (clickable)
-        self.stabStatusBar.SetStatusText(f"{self.rules}", CGOL.STATUS.IDX.FIELD_RULES)
+        self.stabStatusBar.SetStatusText(f"{self.pnlGrid.rules}", CGOL.STATUS.IDX.FIELD_RULES)
 
 
     def on_panel_click(self, event:wx.MouseEvent):
@@ -322,7 +329,6 @@ class CGOL(frmMain):
             event: [wx.MouseEvent]
         """
         self.pnlGrid.do_panel_click(event)
-        self.live_cells = self.pnlGrid.live_cells
         self.update_status_bar()
         event.Skip()
 
@@ -338,8 +344,8 @@ class CGOL(frmMain):
         Args:
             event: [wx.TimerEvent]
         """
-        if not self.is_paused:
-            self.live_cells = self.pnlGrid.advance_generation()
+        if not self.pnlGrid.is_paused:
+            self.pnlGrid.advance_generation()
             self.update_status_bar()
         if self.is_reset_timer:
             self.is_reset_timer = False
@@ -379,15 +385,16 @@ class CGOL(frmMain):
         if w_avail <= 0 or h_avail <= 0:
             return
 
-        w_cell_max = w_avail // self.cols
-        h_cell_max = h_avail // self.rows
+        rows, cols = self.pnlGrid.size()
+        w_cell_max = w_avail // cols
+        h_cell_max = h_avail // rows
 
         cell_size = min(w_cell_max, h_cell_max)
         if cell_size < 1: cell_size = 1
 
         self.pnlGrid.configure(cell_wh=(cell_size, cell_size))
-        w_panel = self.cols * cell_size
-        h_panel = self.rows * cell_size
+        w_panel = cols * cell_size
+        h_panel = rows * cell_size
 
         self.pnlGrid.SetMinSize(wx.Size(w_panel, h_panel))
         self.pnlGrid.Refresh()
@@ -399,9 +406,8 @@ class CGOL(frmMain):
         Args:
             event: [wx.CommandEvent]
         """
-        self.is_paused = not self.is_paused
-        self.pnlGrid.is_paused = self.is_paused
-        if self.is_paused:
+        self.pnlGrid.is_paused = not self.pnlGrid.is_paused
+        if self.pnlGrid.is_paused:
             self.show_message("Game paused...")
         else:
             self.show_message("Game started...")
@@ -416,8 +422,8 @@ class CGOL(frmMain):
         Args:
             event: [wx.CommandEvent]
         """
-        if self.is_paused:
-            self.live_cells = self.pnlGrid.advance_generation()
+        if self.pnlGrid.is_paused:
+            self.pnlGrid.advance_generation()
             self.update_status_bar()
             self.show_message("Advanced one step...")
         self.update_status_bar()
@@ -505,31 +511,30 @@ class CGOL(frmMain):
                 self.show_message("Click the yellow bars to pause")
 
         elif idx_field == CGOL.STATUS.IDX.FIELD_LIVE:
-            self.show_message(f"The live cell count is {self.live_cells}")
+            live_cells = self.pnlGrid.live_cells
+            self.show_message(f"The live cell count is {live_cells}")
 
         elif idx_field == CGOL.STATUS.IDX.FIELD_GRID:
             # edit grid size
-            self.is_paused = True
             self.pnlGrid.is_paused = True
             self.show_message("Resizing grid...")
             dlg = dlgGetDims(self)
-            dlg.spinRows.SetValue(self.rows)
-            dlg.spinCols.SetValue(self.cols)
+            rows, cols = self.pnlGrid.size()
+            dlg.spinRows.SetValue(rows)
+            dlg.spinCols.SetValue(cols)
             dlg.m_sdbSizerButtonsOK.SetDefault()
             dlg.SetTitle("Resize: enter dimensions")
             if dlg.ShowModal() == wx.ID_OK:
                 rows_gen = dlg.spinRows.GetValue()
                 cols_gen = dlg.spinCols.GetValue()
                 self.pnlGrid.resize_game(size=(rows_gen, cols_gen))
-                self.rows, self.cols = self.pnlGrid.size()
-                self.live_cells = self.pnlGrid.live_cells
+                rows, cols = self.pnlGrid.size()
                 self.SendSizeEvent()
-                self.show_message(f"Resized grid to {self.rows}x{self.cols}")
+                self.show_message(f"Resized grid to {rows}x{cols}")
 
         elif idx_field == CGOL.STATUS.IDX.FIELD_RULES:
-            self.is_paused = True
             self.pnlGrid.is_paused = True
-            my_rules = self.rules
+            my_rules = self.pnlGrid.rules
             self.show_message("Changing the rules...")
             dlg = wx.TextEntryDialog(None, message="Enter rules in B/S form", caption="Rules", value=my_rules)
             if dlg.ShowModal() == wx.ID_OK:
@@ -539,9 +544,8 @@ class CGOL(frmMain):
                 except:
                     # restore if it did not work
                     self.pnlGrid.rules = my_rules
-                self.rules = self.pnlGrid.rules
-                self.__register_rules(self.rules)
-                self.show_message(f"Changed rules to {self.rules}")
+                self.__register_rules(self.pnlGrid.rules)
+                self.show_message(f"Changed rules to {self.pnlGrid.rules}")
 
         elif idx_field == CGOL.STATUS.IDX.FIELD_MESSAGE:
             self.show_message("You clicked in the message area")
@@ -558,9 +562,8 @@ class CGOL(frmMain):
         Args:
             event: [wx.CommandEvent]
         """
-        self.is_paused = True
+        self.pnlGrid.is_paused = True
         rules = self.cmbRules.GetValue()
-        self.rules = rules
         self.pnlGrid.rules = rules
         self.update_status_bar()
         self.update_toolbar()
@@ -575,15 +578,14 @@ class CGOL(frmMain):
         Args:
             event: [wx.CommandEvent]
         """
-        self.is_paused = True
+        self.pnlGrid.is_paused = True
         n_action_items = len(CGOL.COMBO_ACTION_ITEMS)
         sel = self.cmbGame.GetSelection()
         if sel >= n_action_items:
             self.update_toolbar()
             idx = sel - n_action_items
             self.pnlGrid.load_preset(idx)
-            self.rules = self.pnlGrid.rules
-            self.__register_rules(self.rules)
+            self.__register_rules(self.pnlGrid.rules)
         else:
             if sel == 0:
                 # New game
@@ -594,15 +596,12 @@ class CGOL(frmMain):
                     rows_gen = dialog.spinRows.GetValue()
                     cols_gen = dialog.spinCols.GetValue()
                     self.pnlGrid.new_game(size=(rows_gen, cols_gen))
-                    self.rules = self.pnlGrid.rules
-                    self.__register_rules(self.rules)
-                    self.rows, self.cols = self.pnlGrid.size()
+                    self.__register_rules(self.pnlGrid.rules)
             elif sel == 1:
                 # Load game
                 self.show_message("Loading game...")
                 self.pnlGrid.load_file()
-                self.rules = self.pnlGrid.rules
-                self.__register_rules(self.rules)
+                self.__register_rules(self.pnlGrid.rules)
             elif sel == 2:
                 # Save game
                 self.show_message("Saving game...")
@@ -614,10 +613,8 @@ class CGOL(frmMain):
                 idx = games_list.index(name_of_game) + n_action_items
                 self.cmbGame.SetSelection(idx)
 
-        self.rows, self.cols = self.pnlGrid.size()
         self.update_toolbar()
         self.update_status_bar()
-        self.live_cells = self.pnlGrid.live_cells
         self.show_message(f"Game: {self.pnlGrid.name_of_game}")
         self.SendSizeEvent()
         self.Refresh()
@@ -630,9 +627,8 @@ class CGOL(frmMain):
         Args:
             event: [wx.CommandEvent]
         """
-        self.is_warp = self.tbarMain.GetToolState(self.TOOL_ID_WARP)
-        self.pnlGrid.is_warp = self.is_warp
-        if self.is_warp:
+        self.pnlGrid.is_warp = self.tbarMain.GetToolState(self.TOOL_ID_WARP)
+        if self.pnlGrid.is_warp:
             self.show_message("Let's do the time warp again...")
         else:
             self.show_message("Let them disintegrate...")
@@ -667,8 +663,7 @@ class CGOL(frmMain):
         snapshot = CGOL.copy_from_clipboard()
         if snapshot and self.pnlGrid.restore_snapshot(snapshot):
             self.show_message("Restored snapshot to grid...")
-            self.is_paused = True
-            self.live_cells = self.pnlGrid.live_cells
+            self.pnlGrid.is_paused = True
             self.update_toolbar()
             self.update_status_bar()
         else:
