@@ -40,6 +40,7 @@
 # TODO: Feature request
 #  Puffer train (\bigger grid?)  https://en.wikipedia.org/wiki/Puffer_train
 #  Minor grid drawing issue: some blank space or cut grid on the bottom row
+#  Open file passed as argument
 # ******************************************************************************
 
 import os
