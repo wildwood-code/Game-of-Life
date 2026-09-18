@@ -112,7 +112,7 @@ class CGOL(frmMain):
         # --- Game settings ---
         self.pnlGrid.is_paused = True
         self.pnlGrid.is_warp = True
-        self.pnlGrid.is_grid_visible = True
+        self.pnlGrid.is_grid_visible = False
 
         # --- Set the application icons ---
         app_icons = wx.IconBundle()

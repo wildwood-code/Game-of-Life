@@ -458,6 +458,8 @@ class pnlGameGrid(wx.Panel):
                 # --- Force the panel to refresh/repaint the screen ---
                 self.__render_grid_to_buffer()
                 self.Refresh()
+        else:
+            self.show_message("Pause to edit grid...")
 
         # --- Allow the event to propagate further if needed ---
         event.Skip()
