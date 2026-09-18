@@ -32,6 +32,8 @@
 #                     Added new games
 #    2026-09-17  KSM  Added grid context menu; v1.5
 #    2026-09-18  KSM  Added grid and grid on/off; fixed live cell count; v1.6
+#    2026-09-18  KSM  Fixed live cell count after adding structure
+#                     Moved all binds out of generated code to this file
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -107,6 +109,7 @@ class CGOL(frmMain):
         # --- Setup the game engine and grid ---
         self.pnlGrid.configure(color=CGOL.LIVE_CELL_COLOR, cell_wh=CGOL.CELL_WH, highlight=CGOL.HIGHLIGHT_COLOR)
         self.pnlGrid.set_message_handler(self.show_message)
+        self.pnlGrid.set_status_update_handler(self.update_status_bar)
         self.pnlGrid.load_preset(CGOL.INITIAL_GAME_IDX)
 
         # --- Game settings ---
@@ -187,29 +190,48 @@ class CGOL(frmMain):
         self.timer_message : wx.CallLater|None = None
         self.show_message("")
 
-        # -- Bind the tool buttons ---
-        self.Bind(wx.EVT_TOOL, self.on_click_warp, id=self.TOOL_ID_WARP)
-        self.Bind(wx.EVT_TOOL, self.on_click_grid, id=self.TOOL_ID_GRID)
+        # --- Bind events for this frame ---
+        self.Bind(wx.EVT_SIZE,  self.on_size)
+        self.Bind(wx.EVT_TIMER, self.on_timer_tick, id=self.tmrGame.GetId())
+
+        # --- Bind the toolbar tools ---
+        self.Bind(wx.EVT_TOOL, self.on_click_warp,   id=self.TOOL_ID_WARP)
+        self.Bind(wx.EVT_TOOL, self.on_click_grid,   id=self.TOOL_ID_GRID)
+        self.Bind(wx.EVT_TOOL, self.on_click_play,   id = self.TOOL_ID_PLAY )
+        self.Bind(wx.EVT_TOOL, self.on_click_step,   id = self.TOOL_ID_STEP)
+        self.Bind(wx.EVT_TOOL, self.on_click_warp,   id = self.TOOL_ID_WARP)
+        self.Bind(wx.EVT_TOOL, self.on_take_snap,    id = self.TOOL_ID_TAKE)
+        self.Bind(wx.EVT_TOOL, self.on_restore_snap, id = self.TOOL_ID_RESTORE)
+        self.Bind(wx.EVT_TOOL, self.on_click_slow,   id = self.TOOL_ID_SLOW)
+        self.Bind(wx.EVT_TOOL, self.on_click_fast,   id = self.TOOL_ID_FAST)
+        self.Bind(wx.EVT_TOOL, self.on_click_about,  id = self.TOOL_ID_ABOUT)
+
+        # --- Bind the controls ---
+        self.cmbGame.Bind(wx.EVT_COMBOBOX, self.on_game_select)
+        self.cmbRules.Bind(wx.EVT_COMBOBOX, self.on_rules_select)
+        self.sldSpeed.Bind(wx.EVT_SLIDER, self.on_speed_scroll)
+        self.stabStatusBar.Bind(wx.EVT_LEFT_DOWN, self.on_status_click)
+        self.stabStatusBar.Bind(wx.EVT_RIGHT_DOWN, self.on_status_click)
 
         # --- Setup key bindings and accelerator table ---
-        self.ID_TOGGLE_PLAY = wx.NewIdRef()
-        self.ID_ADVANCE_GEN = wx.NewIdRef()
-        self.ID_TAKE_SNAP   = wx.NewIdRef()
+        self.ID_TOGGLE_PLAY  = wx.NewIdRef()
+        self.ID_ADVANCE_GEN  = wx.NewIdRef()
+        self.ID_TAKE_SNAP    = wx.NewIdRef()
         self.ID_RESTORE_SNAP = wx.NewIdRef()
         self.ID_TIMER_FASTER = wx.NewIdRef()
         self.ID_TIMER_SLOWER = wx.NewIdRef()
-        self.ID_ABOUT = wx.NewIdRef()
-        self.ID_TOGGLE_GRID = wx.NewIdRef()
-        self.ID_TOGGLE_WARP = wx.NewIdRef()
-        self.Bind(wx.EVT_MENU, self.on_click_play, id=self.ID_TOGGLE_PLAY)
-        self.Bind(wx.EVT_MENU, self.on_click_step, id=self.ID_ADVANCE_GEN)
-        self.Bind(wx.EVT_MENU, self.on_take_snap, id=self.ID_TAKE_SNAP)
+        self.ID_ABOUT        = wx.NewIdRef()
+        self.ID_TOGGLE_GRID  = wx.NewIdRef()
+        self.ID_TOGGLE_WARP  = wx.NewIdRef()
+        self.Bind(wx.EVT_MENU, self.on_click_play,   id=self.ID_TOGGLE_PLAY)
+        self.Bind(wx.EVT_MENU, self.on_click_step,   id=self.ID_ADVANCE_GEN)
+        self.Bind(wx.EVT_MENU, self.on_take_snap,    id=self.ID_TAKE_SNAP)
         self.Bind(wx.EVT_MENU, self.on_restore_snap, id=self.ID_RESTORE_SNAP)
-        self.Bind(wx.EVT_MENU, self.on_click_fast, id=self.ID_TIMER_FASTER)
-        self.Bind(wx.EVT_MENU, self.on_click_slow, id=self.ID_TIMER_SLOWER)
-        self.Bind(wx.EVT_MENU, self.on_click_about, id=self.ID_ABOUT)
-        self.Bind(wx.EVT_MENU, self.on_toggle_warp, id=self.ID_TOGGLE_WARP)
-        self.Bind(wx.EVT_MENU, self.on_toggle_grid, id=self.ID_TOGGLE_GRID)
+        self.Bind(wx.EVT_MENU, self.on_click_fast,   id=self.ID_TIMER_FASTER)
+        self.Bind(wx.EVT_MENU, self.on_click_slow,   id=self.ID_TIMER_SLOWER)
+        self.Bind(wx.EVT_MENU, self.on_click_about,  id=self.ID_ABOUT)
+        self.Bind(wx.EVT_MENU, self.on_toggle_warp,  id=self.ID_TOGGLE_WARP)
+        self.Bind(wx.EVT_MENU, self.on_toggle_grid,  id=self.ID_TOGGLE_GRID)
         accel_entries = [
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_SPACE, self.ID_TOGGLE_PLAY),
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, ord('a'), self.ID_ADVANCE_GEN),
@@ -336,20 +358,6 @@ class CGOL(frmMain):
 
         # Rules field (clickable)
         self.stabStatusBar.SetStatusText(f"{self.pnlGrid.rules}", CGOL.STATUS.IDX.FIELD_RULES)
-
-
-    def on_panel_click(self, event:wx.MouseEvent):
-        """EVT_LEFT_DOWN event handler: intercepts clicks in the game panel
-
-        It then passes the event to the panel and refreshes the live cell count
-        afterward.
-
-        Args:
-            event: [wx.MouseEvent]
-        """
-        self.pnlGrid.do_panel_click(event)
-        self.update_status_bar()
-        event.Skip()
 
 
     def on_timer_tick(self, event:wx.TimerEvent):

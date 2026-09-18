@@ -60,7 +60,6 @@
       <property name="window_name"></property>
       <property name="window_style"></property>
       <property name="xrc_skip_sizer">1</property>
-      <event name="OnSize">on_size</event>
       <object class="wxToolBar" expanded="true">
         <property name="BottomDockable">1</property>
         <property name="LeftDockable">1</property>
@@ -128,7 +127,6 @@
           <property name="permission">protected</property>
           <property name="statusbar">Play/pause</property>
           <property name="tooltip">Play/pause</property>
-          <event name="OnToolClicked">on_click_play</event>
         </object>
         <object class="tool" expanded="false">
           <property name="bitmap">Load From Art Provider; wxART_TIP; wxART_TOOLBAR</property>
@@ -140,7 +138,6 @@
           <property name="permission">protected</property>
           <property name="statusbar">Single step</property>
           <property name="tooltip">Single step</property>
-          <event name="OnToolClicked">on_click_step</event>
         </object>
         <object class="toolSeparator" expanded="false">
           <property name="permission">protected</property>
@@ -205,7 +202,6 @@
           <property name="window_extra_style"></property>
           <property name="window_name"></property>
           <property name="window_style"></property>
-          <event name="OnCombobox">on_game_select</event>
         </object>
         <object class="toolSeparator" expanded="true">
           <property name="permission">protected</property>
@@ -270,7 +266,6 @@
           <property name="window_extra_style"></property>
           <property name="window_name"></property>
           <property name="window_style"></property>
-          <event name="OnCombobox">on_rules_select</event>
         </object>
         <object class="toolSeparator" expanded="false">
           <property name="permission">protected</property>
@@ -285,7 +280,6 @@
           <property name="permission">protected</property>
           <property name="statusbar"></property>
           <property name="tooltip">Warp at edge</property>
-          <event name="OnToolClicked">on_click_warp</event>
         </object>
         <object class="tool" expanded="true">
           <property name="bitmap">Load From Art Provider; wxART_TIP; wxART_TOOLBAR</property>
@@ -311,7 +305,6 @@
           <property name="permission">protected</property>
           <property name="statusbar">Take snapshot</property>
           <property name="tooltip">Take snapshot</property>
-          <event name="OnToolClicked">on_take_snap</event>
         </object>
         <object class="tool" expanded="false">
           <property name="bitmap">Load From Art Provider; wxART_TIP; wxART_TOOLBAR</property>
@@ -323,7 +316,6 @@
           <property name="permission">protected</property>
           <property name="statusbar">Restore snapshot</property>
           <property name="tooltip">Restore snapshot</property>
-          <event name="OnToolClicked">on_restore_snap</event>
         </object>
         <object class="toolSeparator" expanded="false">
           <property name="permission">protected</property>
@@ -338,7 +330,6 @@
           <property name="permission">protected</property>
           <property name="statusbar">Slower</property>
           <property name="tooltip">Slower</property>
-          <event name="OnToolClicked">on_click_slow</event>
         </object>
         <object class="wxSlider" expanded="false">
           <property name="BottomDockable">1</property>
@@ -400,7 +391,6 @@
           <property name="window_extra_style"></property>
           <property name="window_name"></property>
           <property name="window_style"></property>
-          <event name="OnSlider">on_speed_scroll</event>
         </object>
         <object class="tool" expanded="false">
           <property name="bitmap">Load From Art Provider; wxART_TIP; wxART_TOOLBAR</property>
@@ -412,7 +402,6 @@
           <property name="permission">protected</property>
           <property name="statusbar">Faster</property>
           <property name="tooltip">Faster</property>
-          <event name="OnToolClicked">on_click_fast</event>
         </object>
         <object class="toolSeparator" expanded="false">
           <property name="permission">protected</property>
@@ -427,7 +416,6 @@
           <property name="permission">protected</property>
           <property name="statusbar">About</property>
           <property name="tooltip">About</property>
-          <event name="OnToolClicked">on_click_about</event>
         </object>
       </object>
       <object class="wxTimer" expanded="false">
@@ -437,7 +425,6 @@
         <property name="oneshot">0</property>
         <property name="period">1000</property>
         <property name="permission">protected</property>
-        <event name="OnTimer">on_timer_tick</event>
       </object>
       <object class="wxBoxSizer" expanded="true">
         <property name="minimum_size"></property>
@@ -510,7 +497,6 @@
             <property name="window_extra_style"></property>
             <property name="window_name"></property>
             <property name="window_style">wxBORDER_SIMPLE|wxFULL_REPAINT_ON_RESIZE</property>
-            <event name="OnLeftDown">on_panel_click</event>
           </object>
         </object>
         <object class="sizeritem" expanded="false">
@@ -547,8 +533,6 @@
         <property name="window_extra_style"></property>
         <property name="window_name"></property>
         <property name="window_style"></property>
-        <event name="OnLeftDown">on_status_click</event>
-        <event name="OnRightDown">on_status_click</event>
       </object>
     </object>
     <object class="Dialog" expanded="true">

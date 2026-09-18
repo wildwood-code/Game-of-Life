@@ -96,74 +96,8 @@ class frmMain ( wx.Frame ):
 
         self.Centre( wx.BOTH )
 
-        # Connect Events
-        self.Bind( wx.EVT_SIZE, self.on_size )
-        self.Bind( wx.EVT_TOOL, self.on_click_play, id = self.toolPlay.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_click_step, id = self.toolStep.GetId() )
-        self.cmbGame.Bind( wx.EVT_COMBOBOX, self.on_game_select )
-        self.cmbRules.Bind( wx.EVT_COMBOBOX, self.on_rules_select )
-        self.Bind( wx.EVT_TOOL, self.on_click_warp, id = self.toolWarp.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_take_snap, id = self.toolTakeSnap.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_restore_snap, id = self.toolRestoreSnap.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_click_slow, id = self.toolSlower.GetId() )
-        self.sldSpeed.Bind( wx.EVT_SLIDER, self.on_speed_scroll )
-        self.Bind( wx.EVT_TOOL, self.on_click_fast, id = self.toolFaster.GetId() )
-        self.Bind( wx.EVT_TOOL, self.on_click_about, id = self.toolAbout.GetId() )
-        self.Bind( wx.EVT_TIMER, self.on_timer_tick, id=self.tmrGame.GetId() )
-        self.pnlGrid.Bind( wx.EVT_LEFT_DOWN, self.on_panel_click )
-        self.stabStatusBar.Bind( wx.EVT_LEFT_DOWN, self.on_status_click )
-        self.stabStatusBar.Bind( wx.EVT_RIGHT_DOWN, self.on_status_click )
-
     def __del__( self ):
         pass
-
-
-    # Virtual event handlers, override them in your derived class
-    def on_size( self, event ):
-        event.Skip()
-
-    def on_click_play( self, event ):
-        event.Skip()
-
-    def on_click_step( self, event ):
-        event.Skip()
-
-    def on_game_select( self, event ):
-        event.Skip()
-
-    def on_rules_select( self, event ):
-        event.Skip()
-
-    def on_click_warp( self, event ):
-        event.Skip()
-
-    def on_take_snap( self, event ):
-        event.Skip()
-
-    def on_restore_snap( self, event ):
-        event.Skip()
-
-    def on_click_slow( self, event ):
-        event.Skip()
-
-    def on_speed_scroll( self, event ):
-        event.Skip()
-
-    def on_click_fast( self, event ):
-        event.Skip()
-
-    def on_click_about( self, event ):
-        event.Skip()
-
-    def on_timer_tick( self, event ):
-        event.Skip()
-
-    def on_panel_click( self, event ):
-        event.Skip()
-
-    def on_status_click( self, event ):
-        event.Skip()
-
 
 
 ###########################################################################
