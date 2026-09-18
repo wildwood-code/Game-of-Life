@@ -49,7 +49,6 @@ class CGOL_Game(Game):
         cls.GAMES : list[GameSpec] = \
         [   # format: ("name", rows, cols, is_warp, rules, "init-string")
             grids.GRID_GLIDER,
-            grids.GRID_SPINNER,
             grids.GRID_BEACON,
             grids.GRID_TOAD,
             grids.GRID_BLINKER,

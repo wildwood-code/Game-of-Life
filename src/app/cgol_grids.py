@@ -41,15 +41,6 @@ x.x
 """
 )
 
-GRID_SPINNER = (   # Glider becomes a spinner with rules B3/S24
-"Spinner", 16, 16, True, "B3/S24",
-"""\
-x.x
-.xx
-.x.
-"""
-)
-
 GRID_BEACON = (
 "Beacon", 16, 16, True, "B3/S23",
 """\
