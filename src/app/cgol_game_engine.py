@@ -17,6 +17,7 @@
 #    2026-09-09  KSM  Changed class Game to newer CGOL_Game
 #    2026-09-11  KSM  Implemented rules select/change
 #    2026-09-13  KSM  Consolidated redundant rows, cols, name variables
+#    2026-09-18  KSM  Added ability to load .cgol file passed as argument
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -184,7 +185,7 @@ class GameEngine:
         self._game[*key] = value
 
 
-    def load_file(self, parent:wx.Panel) -> bool:
+    def load_file(self, parent:wx.Panel, filename:str|None=None) -> bool:
         """Load a game from a file using Open file dialog
 
         Args:
@@ -197,18 +198,23 @@ class GameEngine:
 
         result = False
 
-        with wx.FileDialog(
-            parent=parent,
-            message="Open file...",
-            defaultDir=os.getcwd(),
-            defaultFile="",
-            wildcard=wildcard,
-            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-        ) as fileDialog:
+        if isinstance(filename, str):
+            # load the specified file directly
+            result = self._game.load_file(filename)
 
-            if fileDialog.ShowModal() == wx.ID_OK:
-                filename = fileDialog.GetPath()
-                result = self._game.load_file(filename)
+        else:
+            # get the filename from an Open file dialog, then load it
+            with wx.FileDialog(
+                parent=parent,
+                message="Open file...",
+                defaultDir=os.getcwd(),
+                defaultFile="",
+                wildcard=wildcard,
+                style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+            ) as fileDialog:
+
+                if fileDialog.ShowModal() == wx.ID_OK:
+                    result = self._game.load_file(fileDialog.GetPath())
 
         return result
 

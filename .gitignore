@@ -3,3 +3,4 @@
 **/sandbox.py
 **/*.cgol
 build/
+!Example.cgol

@@ -19,6 +19,7 @@
 #    2026-09-11  KSM  Implemented rules select/change
 #    2026-09-17  KSM  Added grid context menu
 #    2026-09-18  KSM  Fixed live cell count after adding structure
+#    2026-09-18  KSM  Added ability to load .cgol file passed as argument
 #
 #  Copyright © 2026 Kerry S Martin, wssm243@gmail.com
 # ******************************************************************************
@@ -347,13 +348,13 @@ class pnlGameGrid(wx.Panel):
         self.Refresh() # Queue a screen repaint event
 
 
-    def load_file(self) -> bool:
+    def load_file(self, filename:str|None=None) -> bool:
         """Open a dialog to load a file to the game engine
 
         Returns:
             True if a file was loaded; False if it was cancelled or failed
         """
-        if self.__engine.load_file(self):
+        if self.__engine.load_file(self, filename):
             rows, cols = self.__engine.size()
             self.configure(size=(rows, cols))
             self.__sync_from_engine()
