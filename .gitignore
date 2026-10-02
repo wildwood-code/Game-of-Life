@@ -1,0 +1,9 @@
+**/.vscode/
+**/*.cgol
+build/
+.cmake/
+archive/
+dist/*
+!dist/*.zip
+!Example.cgol
+!Armada.cgol
